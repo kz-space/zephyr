@@ -32,6 +32,11 @@
 #define DT_CPU_COMPAT espressif_riscv
 #include <zephyr/dt-bindings/clock/esp32c3_clock.h>
 #include <esp32c3/rom/rtc.h>
+#elif CONFIG_SOC_SERIES_ESP32C6
+#define DT_CPU_COMPAT espressif_riscv
+#include <zephyr/dt-bindings/clock/esp32c6_clock.h>
+#include <esp32c6/rom/rtc.h>
+#include <soc/dport_access.h>
 #endif /* CONFIG_SOC_SERIES_ESP32xx */
 
 #include <zephyr/drivers/clock_control.h>
@@ -507,6 +512,20 @@ static void esp32_clock_perip_init(void)
 	periph_module_enable(PERIPH_RNG_MODULE);
 }
 #endif /* CONFIG_SOC_SERIES_ESP32C3 */
+
+#if defined(CONFIG_SOC_SERIES_ESP32C6)
+static void esp32_clock_perip_init(void)
+{
+	/* Enable TimerGroup 0 clock to ensure its reference counter will never
+	 * be decremented to 0 during normal operation and preventing it from
+	 * being disabled.
+	 * If the TimerGroup 0 clock is disabled and then reenabled, the watchdog
+	 * registers (Flashboot protection included) will be reenabled, and some
+	 * seconds later, will trigger an unintended reset.
+	 */
+	periph_module_enable(PERIPH_TIMG0_MODULE);
+}
+#endif /* CONFIG_SOC_SERIES_ESP32C6 */
 
 static int esp32_select_rtc_slow_clk(uint8_t slow_clk)
 {
