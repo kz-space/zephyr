@@ -56,6 +56,23 @@ int i2c_stm32_get_config(const struct device *dev, uint32_t *config)
 
 	*config = data->dev_config;
 
+#if CONFIG_I2C_STM32_V2_TIMING
+	/* Print the timing parameter of device data */
+	printk("I2C timing value, report to the DTS :\n");
+	printk("timings = <%d", data->current_timing.periph_clock);
+
+	/* I2C BIT RATE */
+	if (data->current_timing.i2c_speed == 100000) {
+		printk(" I2C_BITRATE_STANDARD ");
+	} else if (data->current_timing.i2c_speed == 400000) {
+		printk(" I2C_BITRATE_FAST ");
+	} else if (data->current_timing.i2c_speed == 1000000) {
+		printk(" I2C_SPEED_FAST_PLUS ");
+	}
+
+	printk(" 0x%X>;\n", data->current_timing.timing_setting);
+#endif /* CONFIG_I2C_STM32_V2_TIMING */
+
 	return 0;
 }
 
