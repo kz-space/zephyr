@@ -17,6 +17,7 @@ supported:
   - spi
   - dac
   - adc
+  - i2c
   - watchdog
   - nvs
   - backup_sram
