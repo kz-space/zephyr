@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 
+#include <zephyr/drivers/display.h>
 #include <zephyr/drivers/video.h>
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
@@ -14,6 +15,56 @@
 LOG_MODULE_REGISTER(main);
 
 #define VIDEO_DEV_SW "VIDEO_SW_GENERATOR"
+
+#ifdef CONFIG_VIDEO_MCUX_MIPI_CSI2RX
+#define DISPLAY_FORMAT PIXEL_FORMAT_ARGB_8888
+#else
+#define DISPLAY_FORMAT PIXEL_FORMAT_BGR_565
+#endif
+
+#ifdef CONFIG_MCUX_ELCDIF_PXP
+#define BUFFER_ALIGN 64
+#endif
+
+#if DT_HAS_CHOSEN(zephyr_display)
+void display_setup(const struct device *const display_dev)
+{
+	struct display_capabilities capabilities;
+
+	if (!device_is_ready(display_dev)) {
+		LOG_ERR("Device %s not found", display_dev->name);
+		return;
+	}
+
+	printk("\nDisplay device: %s\n", display_dev->name);
+
+	display_get_capabilities(display_dev, &capabilities);
+
+	printk("- Capabilities:\n");
+	printk("  x_resolution = %u, y_resolution = %u, supported_pixel_formats = %u\n"
+	       "  current_pixel_format = %u, current_orientation = %u\n\n",
+	       capabilities.x_resolution, capabilities.y_resolution,
+	       capabilities.supported_pixel_formats, capabilities.current_pixel_format,
+	       capabilities.current_orientation);
+
+	display_set_pixel_format(display_dev, DISPLAY_FORMAT);
+}
+
+void video_display_frame(const struct device *const display_dev, struct video_buffer *vbuf,
+			 struct video_format fmt)
+{
+	struct display_buffer_descriptor buf_desc;
+
+	buf_desc.buf_size = vbuf->bytesused;
+	buf_desc.width = fmt.width;
+	buf_desc.pitch = buf_desc.width;
+	buf_desc.height = fmt.height;
+
+	display_write(display_dev, 0, 0, &buf_desc, vbuf->buffer);
+
+	display_blanking_off(display_dev);
+}
+#endif
 
 int main(void)
 {
@@ -40,7 +91,7 @@ int main(void)
 	}
 #endif
 
-	printk("- Device name: %s\n", video_dev->name);
+	printk("Video device: %s\n", video_dev->name);
 
 	/* Get capabilities */
 	if (video_get_caps(video_dev, VIDEO_EP_OUT, &caps)) {
@@ -70,12 +121,27 @@ int main(void)
 	       (char)(fmt.pixelformat >> 8), (char)(fmt.pixelformat >> 16),
 	       (char)(fmt.pixelformat >> 24), fmt.width, fmt.height);
 
+#if DT_HAS_CHOSEN(zephyr_display)
+	const struct device *const display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+
+	if (!device_is_ready(display_dev)) {
+		LOG_ERR("%s: display device not ready.", display_dev->name);
+		return 0;
+	}
+
+	display_setup(display_dev);
+#endif
+
 	/* Size to allocate for each buffer */
 	bsize = fmt.pitch * fmt.height;
 
 	/* Alloc video buffers and enqueue for capture */
 	for (i = 0; i < ARRAY_SIZE(buffers); i++) {
+#ifdef BUFFER_ALIGN
+		buffers[i] = video_buffer_aligned_alloc(bsize, BUFFER_ALIGN);
+#else
 		buffers[i] = video_buffer_alloc(bsize);
+#endif
 		if (buffers[i] == NULL) {
 			LOG_ERR("Unable to alloc video buffer");
 			return 0;
@@ -104,6 +170,10 @@ int main(void)
 
 		printk("\rGot frame %u! size: %u; timestamp %u ms\n", frame++, vbuf->bytesused,
 		       vbuf->timestamp);
+
+#if DT_HAS_CHOSEN(zephyr_display)
+		video_display_frame(display_dev, vbuf, fmt);
+#endif
 
 		err = video_enqueue(video_dev, VIDEO_EP_OUT, vbuf);
 		if (err) {
