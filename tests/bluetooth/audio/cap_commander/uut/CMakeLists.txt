@@ -20,6 +20,7 @@ add_library(uut STATIC
   micp.c
   vcp.c
   vocs.c
+  bap_broadcast_assistant.c
 )
 
 add_subdirectory(${ZEPHYR_BASE}/tests/bluetooth/audio/mocks mocks)
