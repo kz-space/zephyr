@@ -281,4 +281,8 @@ zephyr_udc0: &usbhs {
 	pinctrl-1 = <&pwm130_sleep>;
 	pinctrl-names = "default", "sleep";
 	memory-regions = <&cpuapp_dma_region>;
+
+&adc {
+	memory-regions = <&cpuapp_dma_region>;
+	status = "okay";
 };
