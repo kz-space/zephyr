@@ -28,7 +28,7 @@ LOG_MODULE_REGISTER(bt_tbs_client, CONFIG_BT_TBS_CLIENT_LOG_LEVEL);
  * This requires a significant amount of buffers, and should be optimized.
  */
 
-/* Calculate the requiered buffers for TBS Client discovery */
+/* Calculate the required buffers for TBS Client discovery */
 #define TBS_CLIENT_BUF_COUNT                                                                       \
 	(1 /* Discover buffer */ + 1 /* terminate reason */ +                                      \
 	 IS_ENABLED(CONFIG_BT_TBS_CLIENT_BEARER_PROVIDER_NAME) +                                   \
@@ -1543,14 +1543,14 @@ static uint8_t discover_func(struct bt_conn *conn,
 				err = bt_gatt_subscribe(conn, sub_params);
 				if (err != 0 && err != -EALREADY) {
 					LOG_DBG("Could not subscribe to "
-					       "characterstic at handle 0x%04X"
+					       "characteristic at handle 0x%04X"
 					       "(%d)",
 					       sub_params->value_handle, err);
 					tbs_client_discover_complete(conn, err);
 
 					return BT_GATT_ITER_STOP;
 				} else {
-					LOG_DBG("Subscribed to characterstic at "
+					LOG_DBG("Subscribed to characteristic at "
 					       "handle 0x%04X",
 					       sub_params->value_handle);
 				}

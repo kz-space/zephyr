@@ -1650,7 +1650,7 @@ static void pac_record_cb(struct bt_conn *conn, const struct bt_audio_codec_cap 
 		struct unicast_client *client = &uni_cli_insts[bt_conn_index(conn)];
 		const enum bt_audio_dir dir = client->dir;
 
-		/* TBD: Since the PAC records are optionally notifyable we may want to supply the
+		/* TBD: Since the PAC records are optionally notifiable we may want to supply the
 		 * index and total count of records in the callback, so that it easier for the
 		 * upper layers to determine when a new set of PAC records is being reported.
 		 */
@@ -2168,7 +2168,7 @@ static int bt_audio_cig_create(struct bt_bap_unicast_group *group,
 	cis_count = 0U;
 	for (size_t i = 0U; i < ARRAY_SIZE(group->cis); i++) {
 		if (group->cis[i] == NULL) {
-			/* A NULL CIS acts as a NULL terminater */
+			/* A NULL CIS acts as a NULL terminator */
 			break;
 		}
 
@@ -2202,7 +2202,7 @@ static int bt_audio_cig_reconfigure(struct bt_bap_unicast_group *group,
 	cis_count = 0U;
 	for (size_t i = 0U; i < ARRAY_SIZE(group->cis); i++) {
 		if (group->cis[i] == NULL) {
-			/* A NULL CIS acts as a NULL terminater */
+			/* A NULL CIS acts as a NULL terminator */
 			break;
 		}
 
@@ -3297,7 +3297,7 @@ static uint8_t unicast_client_ase_read_func(struct bt_conn *conn, uint8_t err,
 	unicast_client_ep_set_status(ep, buf);
 	cb_err = unicast_client_ep_subscribe(conn, ep);
 	if (cb_err != 0) {
-		LOG_DBG("Failed to subcribe to ep %p: %d", ep, cb_err);
+		LOG_DBG("Failed to subscribe to ep %p: %d", ep, cb_err);
 		goto fail;
 	}
 
