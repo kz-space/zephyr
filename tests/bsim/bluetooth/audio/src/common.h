@@ -67,7 +67,7 @@ static const uint8_t mock_iso_data[] = {
 	0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
 };
 
-#define MIN_SEND_COUNT 100
+#define MIN_SEND_COUNT 200
 #define WAIT_SECONDS   100                           /* seconds */
 #define WAIT_TIME (WAIT_SECONDS * USEC_PER_SEC) /* microseconds*/
 

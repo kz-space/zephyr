@@ -94,6 +94,7 @@ copy_broadcast_reception_start_param(struct bt_bap_broadcast_assistant_add_src_p
 	bt_addr_le_copy(&add_src_param->addr, &start_param->addr);
 	add_src_param->adv_sid = start_param->adv_sid;
 	add_src_param->broadcast_id = start_param->broadcast_id;
+	add_src_param->pa_sync = true;
 	add_src_param->pa_interval = start_param->pa_interval;
 	add_src_param->num_subgroups = start_param->num_subgroups;
 	add_src_param->subgroups = start_param->subgroups;

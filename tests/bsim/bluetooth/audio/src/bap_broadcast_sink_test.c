@@ -16,12 +16,13 @@
 
 extern enum bst_result_t bst_result;
 
-CREATE_FLAG(broadcaster_found);
+CREATE_FLAG(flag_broadcaster_found);
+CREATE_FLAG(flag_broadcast_code);
 CREATE_FLAG(flag_base_received);
 CREATE_FLAG(flag_base_metadata_updated);
-CREATE_FLAG(pa_synced);
+CREATE_FLAG(flag_pa_synced);
 CREATE_FLAG(flag_syncable);
-CREATE_FLAG(pa_sync_lost);
+CREATE_FLAG(flag_pa_sync_lost);
 CREATE_FLAG(flag_received);
 CREATE_FLAG(flag_pa_request);
 CREATE_FLAG(flag_bis_sync_requested);
@@ -245,7 +246,7 @@ static bool scan_check_and_sync_broadcast(struct bt_data *data, void *user_data)
 	struct bt_uuid_16 adv_uuid;
 	uint32_t broadcast_id;
 
-	if (TEST_FLAG(broadcaster_found)) {
+	if (TEST_FLAG(flag_broadcaster_found)) {
 		/* no-op*/
 		return false;
 	}
@@ -273,7 +274,7 @@ static bool scan_check_and_sync_broadcast(struct bt_data *data, void *user_data)
 	printk("Found broadcaster with ID 0x%06X and addr %s and sid 0x%02X\n", broadcast_id,
 	       le_addr, info->sid);
 
-	SET_FLAG(broadcaster_found);
+	SET_FLAG(flag_broadcaster_found);
 
 	/* Store info for PA sync parameters */
 	memcpy(&broadcaster_info, info, sizeof(broadcaster_info));
@@ -302,7 +303,7 @@ static void bap_pa_sync_synced_cb(struct bt_le_per_adv_sync *sync,
 		printk("PA sync %p synced for broadcast sink with broadcast ID 0x%06X\n", sync,
 		       broadcaster_broadcast_id);
 
-		SET_FLAG(pa_synced);
+		SET_FLAG(flag_pa_synced);
 	}
 }
 
@@ -313,7 +314,7 @@ static void bap_pa_sync_terminated_cb(struct bt_le_per_adv_sync *sync,
 		printk("PA sync %p lost with reason %u\n", sync, info->reason);
 		pa_sync = NULL;
 
-		SET_FLAG(pa_sync_lost);
+		SET_FLAG(flag_pa_sync_lost);
 	}
 }
 
@@ -375,10 +376,21 @@ static int bis_sync_req_cb(struct bt_conn *conn,
 	return 0;
 }
 
+static void broadcast_code_cb(struct bt_conn *conn,
+			      const struct bt_bap_scan_delegator_recv_state *recv_state,
+			      const uint8_t broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE])
+{
+	printk("Broadcast code received for %p\n", recv_state);
+	req_recv_state = recv_state;
+
+	SET_FLAG(flag_broadcast_code);
+}
+
 static struct bt_bap_scan_delegator_cb scan_delegator_cbs = {
 	.pa_sync_req = pa_sync_req_cb,
 	.pa_sync_term_req = pa_sync_term_req_cb,
 	.bis_sync_req = bis_sync_req_cb,
+	.broadcast_code = broadcast_code_cb,
 };
 
 static void validate_stream_codec_cfg(const struct bt_bap_stream *stream)
@@ -620,9 +632,9 @@ static int init(void)
 	bt_le_per_adv_sync_cb_register(&bap_pa_sync_cb);
 	bt_le_scan_cb_register(&bap_scan_cb);
 
-	UNSET_FLAG(broadcaster_found);
+	UNSET_FLAG(flag_broadcaster_found);
 	UNSET_FLAG(flag_base_received);
-	UNSET_FLAG(pa_synced);
+	UNSET_FLAG(flag_pa_synced);
 
 	for (size_t i = 0U; i < ARRAY_SIZE(streams); i++) {
 		streams[i] = bap_stream_from_audio_test_stream(&broadcast_sink_streams[i]);
@@ -690,7 +702,7 @@ static void test_scan_and_pa_sync(void)
 		return;
 	}
 
-	WAIT_FOR_FLAG(broadcaster_found);
+	WAIT_FOR_FLAG(flag_broadcaster_found);
 
 	printk("Broadcast source found, stopping scan\n");
 	err = bt_le_scan_stop();
@@ -708,7 +720,7 @@ static void test_scan_and_pa_sync(void)
 	}
 
 	printk("Waiting for PA sync\n");
-	WAIT_FOR_FLAG(pa_synced);
+	WAIT_FOR_FLAG(flag_pa_synced);
 }
 
 static void test_broadcast_sink_create(void)
@@ -883,6 +895,8 @@ static void test_start_adv(void)
 		BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(BT_UUID_BASS_VAL),
 			      BT_UUID_16_ENCODE(BT_UUID_PACS_VAL)),
 		BT_DATA_BYTES(BT_DATA_SVC_DATA16, BT_UUID_16_ENCODE(BT_UUID_BASS_VAL)),
+		BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(BT_UUID_CAS_VAL)),
+
 	};
 	int err;
 
@@ -956,7 +970,7 @@ static void test_main(void)
 	 * either way will work.
 	 */
 	printk("Waiting for PA disconnected\n");
-	WAIT_FOR_FLAG(pa_sync_lost);
+	WAIT_FOR_FLAG(flag_pa_sync_lost);
 
 	printk("Waiting for streams to be stopped\n");
 	for (size_t i = 0U; i < ARRAY_SIZE(streams); i++) {
