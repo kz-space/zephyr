@@ -49,6 +49,9 @@ struct ptp_port {
 		uint16_t		signaling;
 		uint16_t		sync;
 	} seq_id;
+	enum ptp_port_state		(*state_machine)(enum ptp_port_state state,
+							 enum ptp_port_event event,
+							 bool master_diff);
 };
 
 /**

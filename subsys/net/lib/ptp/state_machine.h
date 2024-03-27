@@ -72,6 +72,19 @@ enum ptp_port_state ptp_state_machine(enum ptp_port_state state,
 				      enum ptp_port_event event,
 				      bool master_diff);
 
+/**
+ * @brief Finite State Machine for PTP Port that is configured as Slave-Only instance.
+ *
+ * @param[in] state	  A current state of the Port
+ * @param[in] event	  An event that occurred for the port
+ * @param[in] master_diff True if Master Clock has changed
+ *
+ * @return A new PTP Port state
+ */
+enum ptp_port_state ptp_so_state_machine(enum ptp_port_state state,
+					 enum ptp_port_event event,
+					 bool master_diff);
+
 #ifdef __cplusplus
 }
 #endif

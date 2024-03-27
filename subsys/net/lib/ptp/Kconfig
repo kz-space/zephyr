@@ -155,6 +155,14 @@ config PTP_PRIORITY2
 	default 128
 	range 0 255
 
+config PTP_SLAVE_ONLY
+	bool "Configure Clock as slaveOnly PTP Instance"
+	depends on PTP_ORDINARY_CLOCK
+	default n
+	help
+	  An Oridinary Clock may be designed to ba a slaveOnly PTP Instnace. In that state
+	  the instance can never enter the MASTER state.
+
 config PTP_ANNOUNCE_RECV_TIMEOUT
 	int "Number of announce intervals to wait"
 	default 3
