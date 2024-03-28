@@ -69,6 +69,7 @@ Hardware
 - Expansion port
 
   - Arduino interface
+  - M.2 WIFI/BT interface
 
 - CAN bus connector
 
@@ -168,6 +169,8 @@ RT1170 EVKB (`mimxrt1170_evk@B//cm7/cm4`)
 +-----------+------------+-------------------------------------+-----------------+-----------------+
 | PIT       | on-chip    | pit                                 | Supported (M7)  | Supported (M7)  |
 +-----------+------------+-------------------------------------+-----------------+-----------------+
+| UART      | NXP NW61x  | M.2 WIFI/BT module                  | Unsupported     | Supported (M7)  |
++-----------+------------+-------------------------------------+-----------------+-----------------+
 
 The default configuration can be found in the defconfig files:
 :zephyr_file:`boards/nxp/mimxrt1170_evk/mimxrt1170_evk_mimxrt1176_cm7_defconfig`
@@ -243,6 +246,14 @@ The MIMXRT1170 SoC has six pairs of pinmux/gpio controllers.
 +---------------------------+----------------+------------------+
 | GPIO_AD_20_SAI1_RX_DATA00 | SAI1_RX_DATA00 | SAI              |
 +---------------------------+----------------+------------------+
+| GPIO_DISP_B2_10           | LPUART2_TX     | M.2 BT HCI       |
++---------------------------+----------------+------------------+
+| GPIO_DISP_B2_11           | LPUART2_RX     | M.2 BT HCI       |
++---------------------------+----------------+------------------+
+| GPIO_DISP_B2_12           | LPUART2_CTS_B  | M.2 BT HCI       |
++---------------------------+----------------+------------------+
+| GPIO_DISP_B2_13           | LPUART1_RTS_B  | M.2 BT HCI       |
++---------------------------+----------------+------------------+
 
 Dual Core samples
 *****************
@@ -287,7 +298,8 @@ cost of reduced resolution
 Serial Port
 ===========
 
-The MIMXRT1170 SoC has 12 UARTs. One is configured for the console and the
+The MIMXRT1170 SoC has 12 UARTs. ``LPUART1`` is configured for the console,
+``LPUART2`` for the Bluetooth Host Controller Interface (BT HCI), and the
 remaining are not used.
 
 Programming and Debugging
