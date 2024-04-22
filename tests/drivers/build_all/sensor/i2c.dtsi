@@ -1030,3 +1030,8 @@ test_i2c_iis328dq: iis328dq@8a {
 	int2-gpios = <&test_gpio 0 0>;
 	threshold-int-pad = <2>;
 };
+
+test_i2c_sht21@82 {
+	compatible = "sensirion,sht21";
+	reg = <0x8b>;
+};
