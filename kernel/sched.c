@@ -959,6 +959,9 @@ void *z_get_next_switch_handle(void *interrupted)
 			 * will not return into it.
 			 */
 			if (z_is_thread_queued(old_thread)) {
+#ifdef CONFIG_SCHED_IPI_CASCADE
+				flag_ipi(ipi_mask_create(old_thread));
+#endif
 				runq_add(old_thread);
 			}
 		}
