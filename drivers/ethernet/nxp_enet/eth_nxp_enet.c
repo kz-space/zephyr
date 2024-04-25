@@ -64,7 +64,6 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define ETH_NXP_ENET_UNIQUE_ID	(SIM->UIDH ^ SIM->UIDMH ^ SIM->UIDML ^ SIM->UIDL)
 #else
 #define ETH_NXP_ENET_UNIQUE_ID 0xFFFFFF
-#error "Unsupported SOC"
 #endif
 
 #define RING_ID 0
