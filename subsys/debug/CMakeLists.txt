@@ -31,6 +31,11 @@ zephyr_sources_ifdef(
   )
 
 zephyr_sources_ifdef(
+  CONFIG_CS_TRACE_DEFMT
+  coresight/cs_trace_defmt.c
+  )
+
+zephyr_sources_ifdef(
   CONFIG_MIPI_STP_DECODER
   mipi_stp_decoder.c
-  )
+)
