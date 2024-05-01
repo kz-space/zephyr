@@ -233,6 +233,11 @@ Drivers and Sensors
   * The ``chain-length`` and ``color-mapping`` properties have been added to all LED strip
     bindings.
 
+
+* LoRa
+
+  * Added driver for Reyax LoRa module
+
 * MDIO
 
 * MFD
