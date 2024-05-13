@@ -119,6 +119,8 @@ struct net_pkt {
 	 * TODO: Replace with net_time_t to decouple from PTP.
 	 */
 	struct net_ptp_time timestamp;
+	uint8_t tx_timestamping : 1; /** Timestamp transferred packet */
+	uint8_t rx_timestamping : 1; /** Timestamp received packet */
 #endif
 
 #if defined(CONFIG_NET_PKT_RXTIME_STATS) || defined(CONFIG_NET_PKT_TXTIME_STATS)
@@ -387,6 +389,38 @@ static inline bool net_pkt_is_ptp(struct net_pkt *pkt)
 static inline void net_pkt_set_ptp(struct net_pkt *pkt, bool is_ptp)
 {
 	pkt->ptp_pkt = is_ptp;
+}
+
+static inline bool net_pkt_is_tx_timestamping(struct net_pkt *pkt)
+{
+#if defined(CONFIG_NET_PKT_TIMESTAMP)
+	return !!(pkt->tx_timestamping);
+#else
+	return false;
+#endif
+}
+
+static inline void net_pkt_set_tx_timestamping(struct net_pkt *pkt, bool is_timestamping)
+{
+#if defined(CONFIG_NET_PKT_TIMESTAMP)
+	pkt->tx_timestamping = is_timestamping;
+#endif
+}
+
+static inline bool net_pkt_is_rx_timestamping(struct net_pkt *pkt)
+{
+#if defined(CONFIG_NET_PKT_TIMESTAMP)
+	return !!(pkt->rx_timestamping);
+#else
+	return false;
+#endif
+}
+
+static inline void net_pkt_set_rx_timestamping(struct net_pkt *pkt, bool is_timestamping)
+{
+#if defined(CONFIG_NET_PKT_TIMESTAMP)
+	pkt->rx_timestamping = is_timestamping;
+#endif
 }
 
 static inline bool net_pkt_is_captured(struct net_pkt *pkt)
