@@ -1363,6 +1363,13 @@ int bt_le_adv_start(const struct bt_le_adv_param *param,
 	struct bt_le_ext_adv *adv = adv_get_legacy();
 	int err;
 
+	if (!(param->options & BT_LE_ADV_OPT_ONE_TIME) &&
+	    (param->options & BT_LE_ADV_OPT_CONNECTABLE) && !param->peer) {
+		LOG_WRN("Deprecation warning: %s BT_LE_ADV_OPT_CONNECTABLE without "
+			"BT_LE_ADV_OPT_ONE_TIME",
+			__func__);
+	}
+
 	if (!adv) {
 		return -ENOMEM;
 	}

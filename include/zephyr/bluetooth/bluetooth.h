@@ -522,11 +522,29 @@ enum {
 	 * advertising is determined by providing scan response data.
 	 * The advertiser address is determined by the type of advertising
 	 * and/or enabling privacy @kconfig{CONFIG_BT_PRIVACY}.
+	 *
+	 * Starting connectable advertising preallocates a connection
+	 * object. If this fails, the API returns @c -ENOMEM.
+	 *
+	 * When an advertiser set results in a connection creation, the
+	 * controller will automatically disable that advertising set.
+	 *
+	 * If the advertising set was started with @ref bt_le_adv_start
+	 * without @ref BT_LE_ADV_OPT_ONE_TIME, the host will attempt to
+	 * resume the advertiser under some conditions. This behavior is
+	 * deprecated and will be removed in the future.
 	 */
 	BT_LE_ADV_OPT_CONNECTABLE = BIT(0),
 
 	/**
 	 * @brief Advertise one time.
+	 *
+	 * This option is now mandatory for non-directed connectable
+	 * advertisers when using @ref bt_le_adv_start. This means the
+	 * entirety of the old automatic resume feature is deprecated.
+	 * Applications should instead choose an implementation of an
+	 * advertiser manager that fits their use case. See the extended
+	 * advertising sample for an example.
 	 *
 	 * Don't try to resume connectable advertising after a connection.
 	 * This option is only meaningful when used together with
@@ -912,9 +930,15 @@ struct bt_le_per_adv_param {
 						  _peer)
 
 
-#define BT_LE_ADV_CONN BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, \
-				       BT_GAP_ADV_FAST_INT_MIN_2, \
-				       BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+/**
+ * @deprecated It is now mandatory to use @ref BT_LE_ADV_OPT_ONE_TIME
+ * for connectable advertising. Please use @ref BT_LE_ADV_CONN_ONE_TIME
+ * instead.
+ */
+#define BT_LE_ADV_CONN                                                                             \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, BT_GAP_ADV_FAST_INT_MIN_2,                      \
+			BT_GAP_ADV_FAST_INT_MAX_2, NULL)                                           \
+	__DEPRECATED_MACRO
 
 /** This is the recommended default for connectable advertisers.
  */
