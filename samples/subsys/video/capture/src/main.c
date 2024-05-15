@@ -43,6 +43,15 @@ int main(void)
 	}
 
 	video = dev;
+#elif defined(CONFIG_VIDEO_MCUX_SDMA)
+	const struct device *const dev = DEVICE_DT_GET_ONE(nxp_video_smartdma);
+
+	if (!device_is_ready(dev)) {
+		LOG_ERR("%s: device not ready.\n", dev->name);
+		return 0;
+	}
+
+	video = dev;
 #endif
 
 	printk("- Device name: %s\n", video->name);
