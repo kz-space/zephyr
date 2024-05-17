@@ -82,6 +82,7 @@ struct bt_audio_broadcast_stream_data {
 	/** Codec Specific Data */
 	uint8_t data[CONFIG_BT_AUDIO_CODEC_CFG_MAX_DATA_SIZE];
 };
+
 #endif /* CONFIG_BT_AUDIO_CODEC_CFG_MAX_DATA_SIZE > 0 */
 
 struct bt_bap_broadcast_source {
@@ -103,8 +104,12 @@ struct bt_bap_broadcast_source {
 	/* The codec specific configured data for each stream in the subgroup */
 	struct bt_audio_broadcast_stream_data stream_data[BROADCAST_STREAM_CNT];
 #endif /* CONFIG_BT_AUDIO_CODEC_CFG_MAX_DATA_SIZE > 0 */
-
 	uint8_t broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE];
+
+	/* The complete codec specific configured data for each stream in the subgroup.
+	 * This contains both the subgroup and the BIS-specific data for each stream.
+	 */
+	struct bt_audio_codec_cfg codec_cfg[BROADCAST_STREAM_CNT];
 
 	/* The subgroups containing the streams used to create the broadcast source */
 	sys_slist_t subgroups;
