@@ -14,6 +14,7 @@
 #ifndef ZEPHYR_INCLUDE_PTP_MSG_H_
 #define ZEPHYR_INCLUDE_PTP_MSG_H_
 
+#include <zephyr/kernel.h>
 #include <zephyr/net/ptp_time.h>
 
 #include "ddt.h"
@@ -163,6 +164,60 @@ struct ptp_management_msg {
 	uint8_t		   reserved;
 	uint8_t		   suffix[];
 } __packed;
+
+/**
+ * @brief Generic PTP message structure.
+ */
+struct ptp_msg {
+	union {
+		struct ptp_header		     header;
+		struct ptp_announce_msg		     announce;
+		struct ptp_sync_msg		     sync;
+		struct ptp_delay_req_msg	     delay_req;
+		struct ptp_follow_up_msg	     follow_up;
+		struct ptp_delay_resp_msg	     delay_resp;
+		struct ptp_pdelay_req_msg	     pdelay_req;
+		struct ptp_pdelay_resp_msg	     pdelay_resp;
+		struct ptp_pdelay_resp_follow_up_msg pdelay_resp_follow_up;
+		struct ptp_signaling_msg	     signaling;
+		struct ptp_management_msg	     management;
+		uint8_t				     mtu[1500]; /* MTU of Ethernet II frame */
+	} __packed;
+	struct {
+		/**
+		 * Timestamp extracted from the message in a host binary format.
+		 * Depending on the message type the value comes from different
+		 * field of the message.
+		 */
+		struct net_ptp_time protocol;
+		struct net_ptp_time host; /* Ingress timestamp on the host side. */
+
+	} timestamp;
+	int ref;
+};
+
+/**
+ * @brief Function allocating space for a new PTP message.
+ *
+ * @return Pointer to the new PTP Message.
+ */
+struct ptp_msg *ptp_msg_alloc(void);
+
+/**
+ * @brief Function removing reference to the PTP message.
+ *
+ * @note If the message is not referenced anywhere, the memory space is cleared.
+ *
+ * @param[in] msg Pointer to the PTP message.
+ */
+void ptp_msg_unref(struct ptp_msg *msg);
+
+/**
+ * @brief Function incrementing reference count for the PTP message.
+ *
+ * @param[in] msg Pointer to the PTP message.
+ */
+void ptp_msg_ref(struct ptp_msg *msg);
 
 #ifdef __cplusplus
 }
