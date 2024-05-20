@@ -15,6 +15,7 @@
 #define ZEPHYR_INCLUDE_PTP_MSG_H_
 
 #include <zephyr/kernel.h>
+#include <zephyr/net/net_ip.h>
 #include <zephyr/net/ptp_time.h>
 
 #include "ddt.h"
@@ -195,6 +196,7 @@ struct ptp_msg {
 	} timestamp;
 	int ref;
 	sys_slist_t tlvs;
+	struct sockaddr addr;
 };
 
 /**

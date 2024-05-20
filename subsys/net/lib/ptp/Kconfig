@@ -5,6 +5,7 @@ menuconfig PTP
 	bool "IEEE 1588 (PTP) support [EXPERIMENTAL]"
 	select EXPERIMENTAL
 	select NET_SOCKETS
+	select NET_CONTEXT_PRIORITY
 	select NET_L2_PTP
 	depends on NET_L2_ETHERNET
 	help
@@ -81,6 +82,22 @@ config PTP_NUM_PORTS
 	help
 	  Configures the PTP stack to work with the given number of ports.
 	  The port concept is the same thing as network interface.
+
+choice
+	prompt "PTP Networking Protocol used by PTP Stack"
+	default PTP_UDP_IPv4_PROTOCOL
+
+	config PTP_UDP_IPv4_PROTOCOL
+		bool "UDP with IPv4"
+		select NET_IPV4_IGMP
+
+	config PTP_UDP_IPv6_PROTOCOL
+		bool "UDP with IPv6"
+		select NET_IPV6_MLD
+
+	config PTP_IEEE_802_3_PROTOCOL
+		bool "IEEE 802.3 - Raw Ethernet packets"
+endchoice
 
 choice
 	prompt "PTP Clock Accuracy"
@@ -231,5 +248,26 @@ config PTP_PRE_MASTER_PRESENT
 config PTP_UNCALIBRATED_PRESENT
 	bool
 	default n
+
+choice PTP_DSCP_PRIORITY
+	prompt "Priority of PTP packets classification"
+	default PTP_DSCP_NONE_PRIORITY
+
+	config PTP_DSCP_HIGH_PRIORITY
+		bool "High priority of PTP packet classification"
+
+	config PTP_DSCP_MEDIUM_PRIORITY
+		bool "Medium priority of PTP packet classification"
+
+	config PTP_DSCP_NONE_PRIORITY
+		bool "Default priority of PTP packet classification"
+endchoice
+
+config PTP_DSCP_VALUE
+	int
+	default 56 if PTP_DSCP_HIGH_PRIORITY
+	default 46 if PTP_DSCP_MEDIUM_PRIORITY
+	default 0 if PTP_DSCP_NONE_PRIORITY
+	range 0 63
 
 endif # PTP
