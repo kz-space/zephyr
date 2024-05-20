@@ -54,6 +54,8 @@ struct ptp_port {
 	enum ptp_port_state		(*state_machine)(enum ptp_port_state state,
 							 enum ptp_port_event event,
 							 bool master_diff);
+	struct ptp_foreign_master_clock *best;
+	sys_slist_t			foreign_list;
 };
 
 /**
@@ -73,6 +75,23 @@ void ptp_port_init(struct net_if *iface, void *user_data);
  * @return True if port identities are equal, False otherwise.
  */
 bool ptp_port_id_eq(const struct ptp_port_id *p1, const struct ptp_port_id *p2);
+
+/**
+ * @brief Function adding foreign Master Clock for the PTP Port based on specified message.
+ *
+ * @param[in] port Pointer to the PTP Port.
+ * @param[in] msg  Pointer to the announce message containg PTP Master data.
+ *
+ * @return Non-zero if the announce message is different than the last.
+ */
+int ptp_port_add_foreign_master(struct ptp_port *port, struct ptp_msg *msg);
+
+/**
+ * @brief Function freeing memory used by foreign masters assigned to given PTP Port.
+ *
+ * @param[in] port Pointer to the PTP Port.
+ */
+void ptp_port_free_foreign_masters(struct ptp_port *port);
 
 #ifdef __cplusplus
 }

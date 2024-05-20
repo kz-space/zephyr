@@ -16,6 +16,37 @@ LOG_MODULE_REGISTER(ptp_port, CONFIG_PTP_LOG_LEVEL);
 #include "transport.h"
 
 static struct ptp_port ports[CONFIG_PTP_NUM_PORTS];
+static struct k_mem_slab foreign_masters_slab;
+
+#if CONFIG_PTP_FOREIGN_MASTER_FEATURE
+BUILD_ASSERT(CONFIG_PTP_FOREIGN_MASTER_RECORD_SIZE >= 5 * CONFIG_PTP_NUM_PORTS,
+	     "PTP_FOREIGN_MASTER_RECORD_SIZE is smaller than expected!");
+
+K_MEM_SLAB_DEFINE_STATIC(foreign_masters_slab,
+			 sizeof(struct ptp_foreign_master_clock),
+			 CONFIG_PTP_FOREIGN_MASTER_RECORD_SIZE,
+			 8);
+#endif
+
+char str_port_id[] = "FF:FF:FF:FF:FF:FF:FF:FF-FFFF";
+
+const char *port_id_str(struct ptp_port_id *port_id)
+{
+	uint8_t *pid = port_id->clk_id.id;
+
+	snprintk(str_port_id, sizeof(str_port_id), "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X-%04X",
+		 pid[0],
+		 pid[1],
+		 pid[2],
+		 pid[3],
+		 pid[4],
+		 pid[5],
+		 pid[6],
+		 pid[7],
+		 port_id->port_number);
+
+	return str_port_id;
+}
 
 static void port_ds_init(struct ptp_port *port)
 {
@@ -57,6 +88,60 @@ static void port_timer_to_handler(struct k_timer *timer)
 	}
 }
 
+static void foreign_clock_cleanup(struct ptp_foreign_master_clock *foreign)
+{
+	struct ptp_msg *msg;
+	int64_t timestamp, timeout, current = k_uptime_get() * NSEC_PER_MSEC;
+
+	while (foreign->messages_count > FOREIGN_MASTER_THRESHOLD) {
+		msg = (struct ptp_msg *)k_fifo_get(&foreign->messages, K_NO_WAIT);
+		ptp_msg_unref(msg);
+		foreign->messages_count--;
+	}
+
+	/* Remove messages that don't arrived at
+	 * FOREIGN_MASTER_TIME_WINDOW (4 * announce interval) - IEEE 1588-2019 9.3.2.4.5
+	 */
+	while (!k_fifo_is_empty(&foreign->messages)) {
+		msg = (struct ptp_msg *)k_fifo_peek_head(&foreign->messages);
+
+		if (msg->header.log_msg_interval <= -31) {
+			timeout = 0;
+		} else if (msg->header.log_msg_interval >= 31) {
+			timeout = INT64_MAX;
+		} else if (msg->header.log_msg_interval > 0) {
+			timeout = FOREIGN_MASTER_TIME_WINDOW_MUL *
+				  (1 << msg->header.log_msg_interval) * NSEC_PER_SEC;
+		} else {
+			timeout = FOREIGN_MASTER_TIME_WINDOW_MUL * NSEC_PER_SEC /
+				  (1 << (-msg->header.log_msg_interval));
+		}
+
+		timestamp = msg->timestamp.host.second * NSEC_PER_SEC +
+			    msg->timestamp.host.nanosecond;
+
+		if (current - timestamp < timeout) {
+			/* Remaining messages are within time window */
+			break;
+		}
+
+		msg = (struct ptp_msg *)k_fifo_get(&foreign->messages, K_NO_WAIT);
+		ptp_msg_unref(msg);
+		foreign->messages_count--;
+	}
+}
+
+static void port_clear_foreign_clock_records(struct ptp_foreign_master_clock *foreign)
+{
+	struct ptp_msg *msg;
+
+	while (!k_fifo_is_empty(&foreign->messages)) {
+		msg = (struct ptp_msg *)k_fifo_get(&foreign->messages, K_NO_WAIT);
+		ptp_msg_unref(msg);
+		foreign->messages_count--;
+	}
+}
+
 void ptp_port_init(struct net_if *iface, void *user_data)
 {
 	struct ptp_port *port;
@@ -76,12 +161,14 @@ void ptp_port_init(struct net_if *iface, void *user_data)
 	port = ports + dds->n_ports;
 
 	port->iface = iface;
+	port->best = NULL;
 	port->socket[PTP_SOCKET_EVENT] = -1;
 	port->socket[PTP_SOCKET_GENERAL] = -1;
 
 	port->state_machine = dds->slave_only ? ptp_so_state_machine : ptp_state_machine;
 
 	port_ds_init(port);
+	sys_slist_init(&port->foreign_list);
 
 	port_timer_init(&port->timers.delay, port_timer_to_handler, port);
 	port_timer_init(&port->timers.announce, port_timer_to_handler, port);
@@ -97,4 +184,74 @@ void ptp_port_init(struct net_if *iface, void *user_data)
 bool ptp_port_id_eq(const struct ptp_port_id *p1, const struct ptp_port_id *p2)
 {
 	return memcmp(p1, p2, sizeof(struct ptp_port_id)) == 0;
+}
+
+int ptp_port_add_foreign_master(struct ptp_port *port, struct ptp_msg *msg)
+{
+	struct ptp_foreign_master_clock *foreign;
+	struct ptp_msg *last;
+	int diff = 0;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&port->foreign_list, foreign, node) {
+		if (ptp_port_id_eq(&msg->header.src_port_id, &foreign->dataset.sender)) {
+			break;
+		}
+	}
+
+	if (!foreign) {
+		LOG_DBG("Port %d has a new foreign master %s",
+			port->port_ds.id.port_number,
+			port_id_str(&msg->header.src_port_id));
+
+		k_mem_slab_alloc(&foreign_masters_slab, (void **)&foreign, K_NO_WAIT);
+		if (!foreign) {
+			LOG_ERR("Couldn't allocate memory for new foreign master");
+			return 0;
+		}
+
+		memset(foreign, 0, sizeof(*foreign));
+		memcpy(&foreign->dataset.sender,
+		       &msg->header.src_port_id,
+		       sizeof(foreign->dataset.sender));
+		k_fifo_init(&foreign->messages);
+		foreign->port = port;
+
+		sys_slist_append(&port->foreign_list, &foreign->node);
+
+		/* First message is not added to records. */
+		return 0;
+	}
+
+	foreign_clock_cleanup(foreign);
+	ptp_msg_ref(msg);
+
+	foreign->messages_count++;
+	k_fifo_put(&foreign->messages, (void *)msg);
+
+	if (foreign->messages_count > 1) {
+		last = (struct ptp_msg *)k_fifo_peek_tail(&foreign->messages);
+		diff = ptp_msg_announce_cmp(&msg->announce, &last->announce);
+	}
+
+	return (foreign->messages_count == FOREIGN_MASTER_THRESHOLD ? 1 : 0) || diff;
+}
+
+void ptp_port_free_foreign_masters(struct ptp_port *port)
+{
+	sys_snode_t *iter;
+	struct ptp_foreign_master_clock *foreign;
+
+	while (!sys_slist_is_empty(&port->foreign_list)) {
+		iter = sys_slist_get(&port->foreign_list);
+		foreign = CONTAINER_OF(iter, struct ptp_foreign_master_clock, node);
+
+		while (foreign->messages_count > FOREIGN_MASTER_THRESHOLD) {
+			struct ptp_msg *msg = (struct ptp_msg *)k_fifo_get(&foreign->messages,
+									   K_NO_WAIT);
+			foreign->messages_count--;
+			ptp_msg_unref(msg);
+		}
+
+		k_mem_slab_free(&foreign_masters_slab, (void *)foreign);
+	}
 }

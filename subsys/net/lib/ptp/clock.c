@@ -31,6 +31,7 @@ struct ptp_clock {
 	struct ptp_parent_ds		parent_ds;
 	struct ptp_time_prop_ds		time_prop_ds;
 	struct ptp_dataset		dataset;
+	struct ptp_foreign_master_clock *best;
 	sys_slist_t			ports_list;
 	struct zsock_pollfd		pollfd[2 * CONFIG_PTP_NUM_PORTS];
 	bool				pollfd_valid;
@@ -150,4 +151,9 @@ void ptp_clock_port_add(struct ptp_port *port)
 {
 	clock.default_ds.n_ports++;
 	sys_slist_append(&clock.ports_list, &port->node);
+}
+
+const struct ptp_foreign_master_clock *ptp_clock_best_master(void)
+{
+	return clock.best;
 }
