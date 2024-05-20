@@ -56,6 +56,8 @@ struct ptp_port {
 							 bool master_diff);
 	struct ptp_foreign_master_clock *best;
 	sys_slist_t			foreign_list;
+	sys_slist_t			delay_req_list;
+	struct ptp_msg			*last_sync_fup;
 };
 
 /**
@@ -65,6 +67,15 @@ struct ptp_port {
  * @param[in] user_data Unused argument needed to comply with @ref net_if_cb_t type.
  */
 void ptp_port_init(struct net_if *iface, void *user_data);
+
+/**
+ * @brief Function returning PTP Port's state.
+ *
+ * @param[in] port Pointer to the PTP Port structure.
+ *
+ * @return PTP Port's current state.
+ */
+enum ptp_port_state ptp_port_state(struct ptp_port *port);
 
 /**
  * @brief Function checking if two port identities are equal.
@@ -92,6 +103,16 @@ int ptp_port_add_foreign_master(struct ptp_port *port, struct ptp_msg *msg);
  * @param[in] port Pointer to the PTP Port.
  */
 void ptp_port_free_foreign_masters(struct ptp_port *port);
+
+/**
+ * @brief Function updating current PTP Master Clock of the PTP Port based on specified message.
+ *
+ * @param[in] port Pointer to the PTP Port.
+ * @param[in] msg  Pointer to the announce message containg PTP Master data.
+ *
+ * @return Non-zero if the announce message is different than the last.
+ */
+int ptp_port_update_current_master(struct ptp_port *port, struct ptp_msg *msg);
 
 #ifdef __cplusplus
 }

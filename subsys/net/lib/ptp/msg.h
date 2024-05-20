@@ -14,6 +14,8 @@
 #ifndef ZEPHYR_INCLUDE_PTP_MSG_H_
 #define ZEPHYR_INCLUDE_PTP_MSG_H_
 
+#include <stdbool.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/net/net_ip.h>
 #include <zephyr/net/ptp_time.h>
@@ -195,6 +197,7 @@ struct ptp_msg {
 
 	} timestamp;
 	int ref;
+	sys_snode_t node;
 	sys_slist_t tlvs;
 	struct sockaddr addr;
 };
@@ -268,6 +271,15 @@ struct ptp_tlv *ptp_msg_add_tlv(struct ptp_msg *msg, int length);
  * @return Negative if m1 < m2, 0 if equal, else positive
  */
 int ptp_msg_announce_cmp(const struct ptp_announce_msg *m1, const struct ptp_announce_msg *m2);
+
+/**
+ * @brief Function checking if given message comes from current PTP Port's Master PTP instance.
+ *
+ * @param[in] msg  Pointer to the message.
+ *
+ * @return True if the message is received from the current PTP Port's Master, false otherwise.
+ */
+bool ptp_msg_current_parent(const struct ptp_msg *msg);
 
 #ifdef __cplusplus
 }
