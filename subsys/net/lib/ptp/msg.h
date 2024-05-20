@@ -194,6 +194,7 @@ struct ptp_msg {
 
 	} timestamp;
 	int ref;
+	sys_slist_t tlvs;
 };
 
 /**
@@ -245,6 +246,16 @@ void ptp_msg_pre_send(struct ptp_msg *msg);
  * @return 0 on success, negative otherwise.
  */
 int ptp_msg_post_recv(struct ptp_port *port, struct ptp_msg *msg, int cnt);
+
+/**
+ * @brief Function adding TLV of specified length to the message.
+ *
+ * @param[in] msg    Pointer to the message that will have TLV added.
+ * @param[in] length Length of the TLV.
+ *
+ * @return Pointer to the TLV or NULL if there was no space to append TLV to the message.
+ */
+struct ptp_tlv *ptp_msg_add_tlv(struct ptp_msg *msg, int length);
 
 #ifdef __cplusplus
 }
