@@ -268,6 +268,63 @@ const struct ptp_clock *ptp_clock_init(void)
 	return &clock;
 }
 
+void ptp_clock_handle_state_decision_evt(void)
+{
+	struct ptp_foreign_master_clock *best = NULL, *foreign;
+	struct ptp_port *port;
+	bool master_changed = false;
+
+	if (!clock.state_decision_event) {
+		return;
+	}
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&clock.ports_list, port, node) {
+		foreign = ptp_port_best_foreign(port);
+		if (!foreign) {
+			continue;
+		}
+		if (!best || ptp_bmca_ds_cmp(&foreign->dataset, &best->dataset)) {
+			best = foreign;
+		}
+	}
+
+	clock.best = best;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&clock.ports_list, port, node) {
+		enum ptp_port_state state;
+		enum ptp_port_event event;
+
+		state = ptp_bmca_state_decision(port);
+
+		switch (state) {
+		case PTP_PS_LISTENING:
+			event = PTP_EVT_NONE;
+			break;
+		case PTP_PS_GRAND_MASTER:
+			clock_update_grandmaster();
+			event = PTP_EVT_RS_GRAND_MASTER;
+			break;
+		case PTP_PS_MASTER:
+			event = PTP_EVT_RS_MASTER;
+			break;
+		case PTP_PS_SLAVE:
+			clock_update_slave();
+			event = PTP_EVT_RS_SLAVE;
+			break;
+		case PTP_PS_PASSIVE:
+			event = PTP_EVT_RS_PASSIVE;
+			break;
+		default:
+			event = PTP_EVT_FAULT_DETECTED;
+			break;
+		}
+
+		ptp_port_event_handle(port, event, master_changed);
+	}
+
+	clock.state_decision_event = false;
+}
+
 int ptp_clock_management_msg_process(struct ptp_port *port, struct ptp_msg *msg)
 {
 	static const ptp_clk_id all_ones = {
