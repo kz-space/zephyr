@@ -52,6 +52,18 @@ int bt_csip_set_coordinator_discover(struct bt_conn *conn)
 	return 0;
 }
 
+struct bt_csip_set_coordinator_set_member *
+bt_csip_set_coordinator_csis_member_by_conn(struct bt_conn *conn)
+{
+	if (conn == NULL) {
+		printk("conn is NULL");
+
+		return NULL;
+	}
+
+	return NULL;
+}
+
 void mock_bt_csip_init(void)
 {
 }
