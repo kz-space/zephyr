@@ -17,6 +17,7 @@
 #include <stdbool.h>
 
 #include <zephyr/kernel.h>
+#include <zephyr/net/net_if.h>
 
 #include "ds.h"
 #include "state_machine.h"
@@ -58,6 +59,8 @@ struct ptp_port {
 	sys_slist_t			foreign_list;
 	sys_slist_t			delay_req_list;
 	struct ptp_msg			*last_sync_fup;
+	struct net_if_timestamp_cb	delay_req_ts_cb;
+	struct net_if_timestamp_cb	sync_ts_cb;
 };
 
 /**

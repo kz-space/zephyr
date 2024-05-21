@@ -18,6 +18,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/net/net_ip.h>
+#include <zephyr/net/net_pkt.h>
 #include <zephyr/net/ptp_time.h>
 
 #include "ddt.h"
@@ -25,6 +26,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* values of the bits of the flagField array for PTP message */
+#define PTP_MSG_ALT_MASTER_FLAG	    BIT(0)
+#define PTP_MSG_TWO_STEP_FLAG	    BIT(1)
+#define PTP_MSG_UNICAST_FLAG	    BIT(2)
 
 /**
  * @brief PTP message type.
@@ -233,6 +239,17 @@ void ptp_msg_ref(struct ptp_msg *msg);
  * @return Type of the message.
  */
 enum ptp_msg_type ptp_msg_type(const struct ptp_msg *msg);
+
+/**
+ * @brief Function extracting PTP message from network packet.
+ *
+ * @param[in] pkt Pointer to the network packet.
+ *
+ * @note Returned message has all data in the network byte order.
+ *
+ * @return Pointer to a PTP message.
+ */
+struct ptp_msg *ptp_msg_from_pkt(struct net_pkt *pkt);
 
 /**
  * @brief Function preparing message right before transmission.
