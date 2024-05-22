@@ -175,6 +175,10 @@ config WIFI_NM_WPA_SUPPLICANT_BSS_MAX_IDLE_TIME
 config WIFI_NM_WPA_SUPPLICANT_NO_DEBUG
 	bool "Disable printing of debug messages, saves code size significantly"
 
+config WIFI_NM_WPA_SUPPLICANT_INF_MON
+	bool "Monitor the net mgmt event to add/del interface"
+	default y
+
 # Create hidden config options that are used in hostap. This way we do not need
 # to mark them as allowed for CI checks, and also someone else cannot use the
 # same name options.
