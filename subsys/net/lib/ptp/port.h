@@ -39,6 +39,8 @@ struct ptp_port {
 	sys_snode_t			node; /* object list */
 	struct ptp_port_ds		port_ds;
 	struct net_if			*iface;
+	uint8_t				link_status;
+	struct net_mgmt_event_callback	link_cb;
 	int				socket[2];
 	struct {
 		struct k_timer		announce;
