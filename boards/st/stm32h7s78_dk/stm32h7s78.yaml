@@ -10,4 +10,11 @@ supported:
   - arduino_gpio
   - gpio
   - uart
+  - watchdog
+  - entropy
+  - adc
+  - dac
+  - pwm
+  - counter
+  - spi
 vendor: st
