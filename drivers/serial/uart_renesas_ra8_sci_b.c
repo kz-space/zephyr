@@ -1010,27 +1010,27 @@ static void uart_ra_sci_b_eri_isr(const struct device *dev)
 
 #define UART_RA_SCI_B_IRQ_CONFIG_INIT(index)                                                       \
 	do {                                                                                       \
-		R_ICU->IELSR[DT_INST_IRQ_BY_NAME(index, rxi, irq)] =                               \
+		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq)] =                    \
 			ELC_EVENT_SCI_RXI(DT_INST_PROP(index, channel));                           \
-		R_ICU->IELSR[DT_INST_IRQ_BY_NAME(index, txi, irq)] =                               \
+		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq)] =                    \
 			ELC_EVENT_SCI_TXI(DT_INST_PROP(index, channel));                           \
-		R_ICU->IELSR[DT_INST_IRQ_BY_NAME(index, tei, irq)] =                               \
+		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, irq)] =                    \
 			ELC_EVENT_SCI_TEI(DT_INST_PROP(index, channel));                           \
-		R_ICU->IELSR[DT_INST_IRQ_BY_NAME(index, eri, irq)] =                               \
+		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, irq)] =                    \
 			ELC_EVENT_SCI_ERI(DT_INST_PROP(index, channel));                           \
                                                                                                    \
-		IRQ_CONNECT(DT_INST_IRQ_BY_NAME(index, rxi, irq),                                  \
-			    DT_INST_IRQ_BY_NAME(index, rxi, priority), uart_ra_sci_b_rxi_isr,      \
-			    DEVICE_DT_INST_GET(index), 0);                                         \
-		IRQ_CONNECT(DT_INST_IRQ_BY_NAME(index, txi, irq),                                  \
-			    DT_INST_IRQ_BY_NAME(index, txi, priority), uart_ra_sci_b_txi_isr,      \
-			    DEVICE_DT_INST_GET(index), 0);                                         \
-		IRQ_CONNECT(DT_INST_IRQ_BY_NAME(index, tei, irq),                                  \
-			    DT_INST_IRQ_BY_NAME(index, tei, priority), uart_ra_sci_b_tei_isr,      \
-			    DEVICE_DT_INST_GET(index), 0);                                         \
-		IRQ_CONNECT(DT_INST_IRQ_BY_NAME(index, eri, irq),                                  \
-			    DT_INST_IRQ_BY_NAME(index, eri, priority), uart_ra_sci_b_eri_isr,      \
-			    DEVICE_DT_INST_GET(index), 0);                                         \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq),                       \
+			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, priority),                  \
+			    uart_ra_sci_b_rxi_isr, DEVICE_DT_INST_GET(index), 0);                  \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq),                       \
+			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, priority),                  \
+			    uart_ra_sci_b_txi_isr, DEVICE_DT_INST_GET(index), 0);                  \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, irq),                       \
+			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, priority),                  \
+			    uart_ra_sci_b_tei_isr, DEVICE_DT_INST_GET(index), 0);                  \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, irq),                       \
+			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, priority),                  \
+			    uart_ra_sci_b_eri_isr, DEVICE_DT_INST_GET(index), 0);                  \
 	} while (0)
 
 #else
@@ -1068,7 +1068,8 @@ static void uart_ra_sci_b_eri_isr(const struct device *dev)
 			.num_blocks = 0,                                                           \
 			.length = 0,                                                               \
 	},                                                                                         \
-	.rx_transfer_cfg_extend = {.activation_source = DT_INST_IRQ_BY_NAME(index, rxi, irq)},     \
+	.rx_transfer_cfg_extend = {.activation_source =                                            \
+					   DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq)},       \
 	.rx_transfer_cfg =                                                                         \
 		{                                                                                  \
 			.p_info = &uart_ra_sci_b_data_##index.rx_transfer_info,                    \
@@ -1094,7 +1095,8 @@ static void uart_ra_sci_b_eri_isr(const struct device *dev)
 			.num_blocks = 0,                                                           \
 			.length = 0,                                                               \
 	},                                                                                         \
-	.tx_transfer_cfg_extend = {.activation_source = DT_INST_IRQ_BY_NAME(index, txi, irq)},     \
+	.tx_transfer_cfg_extend = {.activation_source =                                            \
+					   DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq)},       \
 	.tx_transfer_cfg =                                                                         \
 		{                                                                                  \
 			.p_info = &uart_ra_sci_b_data_##index.tx_transfer_info,                    \
@@ -1112,10 +1114,10 @@ static void uart_ra_sci_b_eri_isr(const struct device *dev)
 #endif
 
 #define UART_RA_SCI_B_INIT(index)                                                                  \
-	PINCTRL_DT_INST_DEFINE(index);                                                             \
+	PINCTRL_DT_DEFINE(DT_INST_PARENT(index));                                                  \
                                                                                                    \
 	static const struct uart_ra_sci_b_config uart_ra_sci_b_config_##index = {                  \
-		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(index),                                     \
+		.pcfg = PINCTRL_DT_DEV_CONFIG_GET(DT_INST_PARENT(index)),                          \
 	};                                                                                         \
                                                                                                    \
 	static struct uart_ra_sci_b_data uart_ra_sci_b_data_##index = {                            \
@@ -1132,14 +1134,14 @@ static void uart_ra_sci_b_eri_isr(const struct device *dev)
 		.fsp_config =                                                                      \
 			{                                                                          \
 				.channel = DT_INST_PROP(index, channel),                           \
-				.rxi_ipl = DT_INST_IRQ_BY_NAME(index, rxi, priority),              \
-				.rxi_irq = DT_INST_IRQ_BY_NAME(index, rxi, irq),                   \
-				.txi_ipl = DT_INST_IRQ_BY_NAME(index, txi, priority),              \
-				.txi_irq = DT_INST_IRQ_BY_NAME(index, txi, irq),                   \
-				.tei_ipl = DT_INST_IRQ_BY_NAME(index, tei, priority),              \
-				.tei_irq = DT_INST_IRQ_BY_NAME(index, tei, irq),                   \
-				.eri_ipl = DT_INST_IRQ_BY_NAME(index, eri, priority),              \
-				.eri_irq = DT_INST_IRQ_BY_NAME(index, eri, irq),                   \
+				.rxi_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, priority),   \
+				.rxi_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq),        \
+				.txi_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, priority),   \
+				.txi_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq),        \
+				.tei_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, priority),   \
+				.tei_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, irq),        \
+				.eri_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, priority),   \
+				.eri_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, irq),        \
 			},                                                                         \
 		.fsp_config_extend = {},                                                           \
 		.fsp_baud_setting = {},                                                            \

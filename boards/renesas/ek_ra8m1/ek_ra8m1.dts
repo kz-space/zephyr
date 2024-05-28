@@ -17,8 +17,8 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
-		zephyr,console = &sci9;
-		zephyr,shell-uart = &sci9;
+		zephyr,console = &uart9;
+		zephyr,shell-uart = &uart9;
 	};
 
 	leds {
@@ -60,8 +60,11 @@
 };
 
 &sci9 {
-	current-speed = <115200>;
 	pinctrl-0 = <&sci9_default>;
 	pinctrl-names = "default";
 	status = "okay";
+	uart9: uart {
+		current-speed = <115200>;
+		status = "okay";
+	};
 };
