@@ -1,12 +1,20 @@
+common:
+  platform_allow:
+    - native_posix
+    - native_posix/native/64
+    - native_sim
+    - native_sim/native/64
+    - qemu_x86
+    - qemu_cortex_m3
+    - nrf9160dk/nrf9160/ns
+  integration_platforms:
+    - native_sim
+
 tests:
   bluetooth.bt_crypto:
-    platform_allow:
-      - native_posix
-      - native_posix/native/64
-      - native_sim
-      - native_sim/native/64
-      - qemu_x86
-      - qemu_cortex_m3
-    integration_platforms:
-      - native_sim
+    tags: bluetooth
+  bluetooth.bt_crypto.psa:
+    filter: CONFIG_BUILD_WITH_TFM
+    extra_configs:
+      - CONFIG_BT_USE_PSA_API=y
     tags: bluetooth
