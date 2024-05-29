@@ -25,6 +25,7 @@
 
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/clock_control/smartbond_clock_control.h>
 
 LOG_MODULE_REGISTER(usb_dc_smartbond, CONFIG_USB_DRIVER_LOG_LEVEL);
 
@@ -723,11 +724,26 @@ static void handle_bus_reset(void)
 	check_reset_end(alt_ev);
 }
 
+static void usb_clock_on(void)
+{
+	clock_control_on(DEVICE_DT_GET(DT_NODELABEL(osc)),
+			 (clock_control_subsys_rate_t)SMARTBOND_CLK_USB);
+}
+
+static void usb_clock_off(void)
+{
+	clock_control_off(DEVICE_DT_GET(DT_NODELABEL(osc)),
+			  (clock_control_subsys_rate_t)SMARTBOND_CLK_USB);
+}
+
 static void handle_alt_ev(void)
 {
 	struct smartbond_ep_state *ep_state;
 	uint32_t alt_ev = USB->USB_ALTEV_REG;
 
+	if (USB->USB_NFSR_REG == NFSR_NODE_SUSPEND) {
+		usb_clock_on();
+	}
 	alt_ev = check_reset_end(alt_ev);
 	if (GET_BIT(alt_ev, USB_USB_ALTEV_REG_USB_RESET) &&
 	    dev_state.nfsr != NFSR_NODE_RESET) {
@@ -755,6 +771,7 @@ static void handle_alt_ev(void)
 		USB->USB_ALTMSK_REG =
 			USB_USB_ALTMSK_REG_USB_M_RESET_Msk |
 			USB_USB_ALTMSK_REG_USB_M_RESUME_Msk;
+		usb_clock_off();
 		dev_state.status_cb(USB_DC_SUSPEND, NULL);
 	}
 }
@@ -1253,18 +1270,23 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data *const ep_cfg)
 
 int usb_dc_detach(void)
 {
-	LOG_DBG("");
+	LOG_DBG("Detach");
 
 	REG_CLR_BIT(USB_MCTRL_REG, USB_NAT);
 
 	dev_state.attached = false;
+
+	usb_clock_off();
 
 	return 0;
 }
 
 int usb_dc_attach(void)
 {
-	LOG_DBG("");
+	LOG_INF("Attach");
+
+	usb_clock_on();
+
 	if (GET_BIT(USB->USB_MCTRL_REG, USB_USB_MCTRL_REG_USB_NAT) == 0) {
 		USB->USB_MCTRL_REG = USB_USB_MCTRL_REG_USBEN_Msk;
 		USB->USB_NFSR_REG = 0;
