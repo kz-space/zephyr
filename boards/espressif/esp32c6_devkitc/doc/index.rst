@@ -1,12 +1,12 @@
 .. _esp32c6_devkitc:
 
 ESP32-C6-DevKitC-1
-########
+##################
 
 Overview
 ********
 
-ESP32-C6 is Espressif’s first Wi-Fi 6 SoC integrating 2.4 GHz Wi-Fi 6, Bluetooth 5.3 (LE) and the
+ESP32-C6 is Espressif's first Wi-Fi 6 SoC integrating 2.4 GHz Wi-Fi 6, Bluetooth 5.3 (LE) and the
 802.15.4 protocol. ESP32-C6 achieves an industry-leading RF performance, with reliable security
 features and multiple memory resources for IoT products.
 It consists of a high-performance (HP) 32-bit RISC-V processor, which can be clocked up to 160 MHz,
@@ -20,7 +20,7 @@ Most of the I/O pins are broken out to the pin headers on both sides for easy in
 Developers can either connect peripherals with jumper wires or mount ESP32-C6-DevKitC-1 on
 a breadboard. [2]_
 
-ESP32-C6 includes the fallowing features:
+ESP32-C6 includes the following features:
 
 - 32-bit core RISC-V microcontroller with a clock speed of up to 160 MHz
 - 400 KB of internal RAM
@@ -74,7 +74,7 @@ Security:
 - Cryptographic hardware acceleration: (AES-128/256, ECC, HMAC, RSA, SHA, Digital signature, Hash)
 - Random number generator (RNG)
 
-For more information, check the datasheet at `ESP32-C6 Datasheet`_.
+For more information, check the datasheet at `ESP32C6 Datasheet`_
 
 Supported Features
 ==================
