@@ -179,12 +179,15 @@ SECTIONS
     *(.gnu.linkonce.s2.*)
     *libzephyr.a:mmu_hal.*(.rodata .rodata.*)
     *libzephyr.a:rtc_clk.*(.rodata .rodata.*)
+    *libzephyr.a:rtc_init.*(.rodata .rodata.*)
+    *libzephyr.a:rtc_sleep.*(.rodata .rodata.*)
 
     KEEP(*(.jcr))
     *(.dram1 .dram1.*)
     . = ALIGN(4);
     *(.rodata)
     *(.rodata.*)
+    *(.srodata.*)
 
     *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.gnu.linkonce.r.*)
