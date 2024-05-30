@@ -427,6 +427,9 @@ Libraries / Subsystems
 
   * Mbed TLS was updated to 3.6.0. Release notes can be found at:
     https://github.com/Mbed-TLS/mbedtls/releases/tag/v3.6.0
+  * :kconfig:option:`CONFIG_MBEDTLS_PSA_P256M_DRIVER_ENABLED` enables support
+    for the Mbed TLS's p256-m driver PSA crypto library. This is a Cortex-M SW
+    optimized implementation of secp256r1 curve.
 
 * Random
 
