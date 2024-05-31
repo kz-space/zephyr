@@ -18,3 +18,13 @@ properties:
   "#size-cells":
     required: true
     const: 0
+
+  data-bus-width:
+    type: int
+    default: 16
+    enum:
+      - 8
+      - 9
+      - 16
+    description: |
+      Bus width options for Type A and Type B

@@ -312,6 +312,12 @@ static int mcux_lpc_syscon_clock_control_get_subsys_rate(
 		break;
 #endif
 #endif /* CONFIG_ADC_MCUX_LPADC */
+
+#if defined(CONFIG_MCUX_FLEXIO)
+	case MCUX_FLEXIO0_CLK:
+		*rate = CLOCK_GetFlexioClkFreq();
+		break;
+#endif /* defined(CONFIG_MCUX_FLEXIO) */
 	}
 
 	return 0;
