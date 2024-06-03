@@ -79,8 +79,9 @@ int main(void)
 	       (char)(fmt.pixelformat >> 24),
 	       fmt.width, fmt.height);
 
+
 	/* Size to allocate for each buffer */
-	bsize = fmt.pitch * fmt.height;
+	bsize = fmt.pitch * fmt.height / caps.vbuf_per_frame;
 
 	/* Alloc video buffers and enqueue for capture */
 	for (i = 0; i < ARRAY_SIZE(buffers); i++) {
