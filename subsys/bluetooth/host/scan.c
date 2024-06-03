@@ -24,6 +24,8 @@
 #include "id.h"
 
 #include "common/bt_str.h"
+#include "scan.h"
+#include <string.h>
 
 #define LOG_LEVEL CONFIG_BT_HCI_CORE_LOG_LEVEL
 #include <zephyr/logging/log.h>
@@ -78,6 +80,8 @@ static sys_slist_t pa_sync_cbs = SYS_SLIST_STATIC_INIT(&pa_sync_cbs);
 
 void bt_scan_reset(void)
 {
+	memset(&bt_dev.scanner_state, 0x0, sizeof(bt_dev.scanner_state));
+
 	scan_dev_found_cb = NULL;
 #if defined(CONFIG_BT_EXT_ADV)
 	reset_reassembling_advertiser();
@@ -98,13 +102,7 @@ static int set_le_ext_scan_enable(uint8_t enable, uint16_t duration)
 
 	cp = net_buf_add(buf, sizeof(*cp));
 
-	if (enable == BT_HCI_LE_SCAN_ENABLE) {
-		cp->filter_dup = atomic_test_bit(bt_dev.flags,
-						 BT_DEV_SCAN_FILTER_DUP);
-	} else {
-		cp->filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_DISABLE;
-	}
-
+	cp->filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_DISABLE;
 	cp->enable = enable;
 	cp->duration = sys_cpu_to_le16(duration);
 	cp->period = 0;
@@ -134,13 +132,7 @@ static int bt_le_scan_set_enable_legacy(uint8_t enable)
 
 	cp = net_buf_add(buf, sizeof(*cp));
 
-	if (enable == BT_HCI_LE_SCAN_ENABLE) {
-		cp->filter_dup = atomic_test_bit(bt_dev.flags,
-						 BT_DEV_SCAN_FILTER_DUP);
-	} else {
-		cp->filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_DISABLE;
-	}
-
+	cp->filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_DISABLE;
 	cp->enable = enable;
 
 	bt_hci_cmd_state_set_init(buf, &state, bt_dev.flags, BT_DEV_SCANNING,
@@ -164,10 +156,36 @@ int bt_le_scan_set_enable(uint8_t enable)
 	return bt_le_scan_set_enable_legacy(enable);
 }
 
-static int start_le_scan_ext(struct bt_hci_ext_scan_phy *phy_1m,
-			     struct bt_hci_ext_scan_phy *phy_coded,
-			     uint16_t duration)
+static int start_le_scan_ext(struct bt_le_scan_param * p_scan_param, uint16_t duration)
 {
+	struct bt_hci_ext_scan_phy param_1m;
+	struct bt_hci_ext_scan_phy param_coded;
+
+	struct bt_hci_ext_scan_phy *phy_1m = NULL;
+	struct bt_hci_ext_scan_phy *phy_coded = NULL;
+
+	if (!(p_scan_param->options & BT_LE_SCAN_OPT_NO_1M)) {
+		param_1m.type = p_scan_param->type;
+		param_1m.interval = sys_cpu_to_le16(p_scan_param->interval);
+		param_1m.window = sys_cpu_to_le16(p_scan_param->window);
+
+		phy_1m = &param_1m;
+	}
+
+	if (p_scan_param->options & BT_LE_SCAN_OPT_CODED) {
+		uint16_t interval = p_scan_param->interval_coded ?
+			p_scan_param->interval_coded :
+			p_scan_param->interval;
+		uint16_t window = p_scan_param->window_coded ?
+			p_scan_param->window_coded :
+			p_scan_param->window;
+
+		param_coded.type = p_scan_param->type;
+		param_coded.interval = sys_cpu_to_le16(interval);
+		param_coded.window = sys_cpu_to_le16(window);
+		phy_coded = &param_coded;
+	}
+
 	struct bt_hci_cp_le_set_ext_scan_param *set_param;
 	struct net_buf *buf;
 	uint8_t own_addr_type;
@@ -204,13 +222,7 @@ static int start_le_scan_ext(struct bt_hci_ext_scan_phy *phy_1m,
 	set_param = net_buf_add(buf, sizeof(*set_param));
 	set_param->own_addr_type = own_addr_type;
 	set_param->phys = 0;
-
-	if (IS_ENABLED(CONFIG_BT_FILTER_ACCEPT_LIST) &&
-	    atomic_test_bit(bt_dev.flags, BT_DEV_SCAN_FILTERED)) {
-		set_param->filter_policy = BT_HCI_LE_SCAN_FP_BASIC_FILTER;
-	} else {
-		set_param->filter_policy = BT_HCI_LE_SCAN_FP_BASIC_NO_FILTER;
-	}
+	set_param->filter_policy = p_scan_param->options & BT_LE_SCAN_OPT_FILTER_ACCEPT_LIST ? BT_HCI_LE_SCAN_FP_BASIC_FILTER : BT_HCI_LE_SCAN_FP_BASIC_NO_FILTER;
 
 	if (phy_1m) {
 		set_param->phys |= BT_HCI_LE_EXT_SCAN_PHY_1M;
@@ -232,12 +244,10 @@ static int start_le_scan_ext(struct bt_hci_ext_scan_phy *phy_1m,
 		return err;
 	}
 
-	atomic_set_bit_to(bt_dev.flags, BT_DEV_ACTIVE_SCAN, active_scan);
-
 	return 0;
 }
 
-static int start_le_scan_legacy(uint8_t scan_type, uint16_t interval, uint16_t window)
+static int start_le_scan_legacy(struct bt_le_scan_param * p_param)
 {
 	struct bt_hci_cp_le_set_scan_param set_param;
 	struct net_buf *buf;
@@ -246,22 +256,22 @@ static int start_le_scan_legacy(uint8_t scan_type, uint16_t interval, uint16_t w
 
 	(void)memset(&set_param, 0, sizeof(set_param));
 
-	set_param.scan_type = scan_type;
+	set_param.scan_type = p_param->type;
 
 	/* for the rest parameters apply default values according to
 	 *  spec 4.2, vol2, part E, 7.8.10
 	 */
-	set_param.interval = sys_cpu_to_le16(interval);
-	set_param.window = sys_cpu_to_le16(window);
+	set_param.interval = sys_cpu_to_le16(p_param->interval);
+	set_param.window = sys_cpu_to_le16(p_param->window);
 
 	if (IS_ENABLED(CONFIG_BT_FILTER_ACCEPT_LIST) &&
-	    atomic_test_bit(bt_dev.flags, BT_DEV_SCAN_FILTERED)) {
+	    p_param->options & BT_LE_SCAN_OPT_FILTER_ACCEPT_LIST) {
 		set_param.filter_policy = BT_HCI_LE_SCAN_FP_BASIC_FILTER;
 	} else {
 		set_param.filter_policy = BT_HCI_LE_SCAN_FP_BASIC_NO_FILTER;
 	}
 
-	active_scan = scan_type == BT_HCI_LE_SCAN_ACTIVE;
+	active_scan = p_param->type == BT_HCI_LE_SCAN_ACTIVE;
 	err = bt_id_set_scan_own_addr(active_scan, &set_param.addr_type);
 	if (err) {
 		return err;
@@ -284,92 +294,191 @@ static int start_le_scan_legacy(uint8_t scan_type, uint16_t interval, uint16_t w
 		return err;
 	}
 
-	atomic_set_bit_to(bt_dev.flags, BT_DEV_ACTIVE_SCAN, active_scan);
+	return 0;
+}
+
+static int start_scan(struct bt_le_scan_param * p_scan_param)
+{
+	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
+	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
+		return start_le_scan_ext(p_scan_param, 0);
+	}
+
+	return start_le_scan_legacy(p_scan_param);
+}
+
+static uint32_t m_scan_check_if_state_allowed(enum scan_enabled_reason enable_reason)
+{
+	/* check if state is already set */
+	if (atomic_test_bit(bt_dev.scanner_state.scan_flags, enable_reason)) {
+		return -EAGAIN;
+	}
+
+	if (enable_reason == SCAN_ENABLED_REASON_EXPLICIT_SCAN && !BT_LE_STATES_SCAN_INIT(bt_dev.le.states) && atomic_test_bit(bt_dev.flags, BT_DEV_INITIATING)) {
+		return -EAGAIN;
+	}
 
 	return 0;
 }
 
-static int start_host_initiated_scan(bool fast_scan)
+bool bt_le_scan_active_scanner_running(void)
 {
-	uint16_t interval, window;
-
-	if (fast_scan) {
-		interval = BT_GAP_SCAN_FAST_INTERVAL;
-		window = BT_GAP_SCAN_FAST_WINDOW;
-	} else {
-		interval = CONFIG_BT_BACKGROUND_SCAN_INTERVAL;
-		window = CONFIG_BT_BACKGROUND_SCAN_WINDOW;
-	}
-
-	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
-	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
-		struct bt_hci_ext_scan_phy scan_phy_params;
-
-		scan_phy_params.type = BT_HCI_LE_SCAN_PASSIVE;
-		scan_phy_params.interval = sys_cpu_to_le16(interval);
-		scan_phy_params.window = sys_cpu_to_le16(window);
-
-		/* Scan on 1M + Coded if the controller supports it*/
-		if (BT_FEAT_LE_PHY_CODED(bt_dev.le.features)) {
-			return start_le_scan_ext(&scan_phy_params, &scan_phy_params, 0);
-		} else {
-			return start_le_scan_ext(&scan_phy_params, NULL, 0);
-		}
-
-	}
-
-	return start_le_scan_legacy(BT_HCI_LE_SCAN_PASSIVE, interval, window);
+	return atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING) && bt_dev.scanner_state.used_scan_param.type == BT_LE_SCAN_TYPE_ACTIVE;
 }
 
-int bt_le_scan_update(bool fast_scan)
+int bt_le_scan_update_and_reconfigure(enum scan_enabled_reason enable_reason, bool enable)
 {
-	if (atomic_test_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN)) {
-		/* The application has already explicitly started scanning.
-		 * We should keep the scanner running to avoid changing scan parameters.
-		 */
-		return 0;
+	printk("================\n");
+	/* Check if it can be enabled */
+	uint32_t err;
+	if(enable_reason == SCAN_UPDATE_JUST_CHECK)
+	{
+		/* Only check if the scanner parameters should be updated / the scanner should be started.
+		 * This is mainly triggered once connections are established. */
 	}
-
-	if (atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING)) {
-		int err;
-
-		err = bt_le_scan_set_enable(BT_HCI_LE_SCAN_DISABLE);
-		if (err) {
+	else if(enable)
+	{
+		printk("Enable %u\n", enable_reason);
+		err = m_scan_check_if_state_allowed(enable_reason);
+		if (err)
+		{
 			return err;
 		}
+		atomic_set_bit(bt_dev.scanner_state.scan_flags, enable_reason);
+	}
+	else
+	{
+		printk("Disable %u\n", enable_reason);
+		atomic_clear_bit(bt_dev.scanner_state.scan_flags, enable_reason);
 	}
 
-	if (IS_ENABLED(CONFIG_BT_CENTRAL)) {
-		struct bt_conn *conn;
+	printk("choose parameters\n");
+	struct bt_le_scan_param scan_param;
 
-		if (!BT_LE_STATES_SCAN_INIT(bt_dev.le.states)) {
-			/* don't restart scan if we have pending connection */
-			conn = bt_conn_lookup_state_le(BT_ID_DEFAULT, NULL,
-						BT_CONN_INITIATING);
-			if (conn) {
-				bt_conn_unref(conn);
-				return 0;
+	/* From high priority to low priority: select parameters */
+	/* 1. Priority: explicitly chosen parameters */
+	if (atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_EXPLICIT_SCAN)) {
+		memcpy(&scan_param, &bt_dev.scanner_state.explicit_scan_param, sizeof(scan_param));
+	}
+	/* Below this, the scanner module chooses the parameters. */
+	/* 2. Priority: reuse parameters from initiator */
+	else if (atomic_test_bit(bt_dev.flags, BT_DEV_INITIATING)) {
+		scan_param = (struct bt_le_scan_param)
+		{
+			.type = BT_LE_SCAN_TYPE_PASSIVE,
+			.options = 0x0,
+			.interval = bt_dev.create_param.interval,
+			.window = bt_dev.create_param.window,
+			.timeout = 0,
+			.interval_coded = bt_dev.create_param.interval_coded,
+			.window_coded = bt_dev.create_param.window_coded,
+		};
+	}
+	/* 3. Priority: choose custom parameters */
+	else {
+		scan_param = (struct bt_le_scan_param)
+		{
+			.type = BT_LE_SCAN_TYPE_PASSIVE,
+			.options = 0x0,
+			.interval = CONFIG_BT_BACKGROUND_SCAN_INTERVAL,
+			.window = CONFIG_BT_BACKGROUND_SCAN_WINDOW,
+			.timeout = 0,
+			.interval_coded = 0,
+			.window_coded = 0,
+		};
+
+		if (BT_FEAT_LE_PHY_CODED(bt_dev.le.features)) {
+			scan_param.options |= BT_LE_SCAN_OPT_CODED;
+		}
+
+		if (atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_SYNC_SYNCING) ||
+		    atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_SCAN_BEFORE_INITIATE))
+		{
+			scan_param.window = BT_GAP_SCAN_FAST_WINDOW;
+			scan_param.interval = BT_GAP_SCAN_FAST_INTERVAL;
+		}
+
+		if (atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_EXPLICIT_SCAN))
+		{
+			scan_param.options |= BT_LE_SCAN_OPT_FILTER_DUPLICATE;
+		}
+	}
+
+	enum scan_action {
+		SCAN_ACTION_NONE,
+		SCAN_ACTION_START,
+		SCAN_ACTION_STOP,
+		SCAN_ACTION_UPDATE,
+	};
+	enum scan_action action = SCAN_ACTION_NONE;
+
+	bool is_scanning = atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING);
+
+	/* Check if there is reason to have the scanner running */
+	if (atomic_get(bt_dev.scanner_state.scan_flags) != 0)
+	{
+		/* Scanner should run */
+		if(is_scanning)
+		{
+			if (memcmp(&scan_param, &bt_dev.scanner_state.used_scan_param,
+				   sizeof(scan_param))) {
+				action = SCAN_ACTION_UPDATE;
+			}
+			else
+			{
+				/* Already scanning with the desired parameters */
+				action = SCAN_ACTION_NONE;
 			}
 		}
-
-		conn = bt_conn_lookup_state_le(BT_ID_DEFAULT, NULL,
-					       BT_CONN_SCAN_BEFORE_INITIATING);
-		if (conn) {
-			atomic_set_bit(bt_dev.flags, BT_DEV_SCAN_FILTER_DUP);
-
-			bt_conn_unref(conn);
-
-			/* Start/Restart the scanner */
-			return start_host_initiated_scan(fast_scan);
+		else
+		{
+			action = SCAN_ACTION_START;
+		}
+	}
+	else
+	{
+		/* Scanner should not run */
+		if(is_scanning)
+		{
+			action = SCAN_ACTION_STOP;
+		}
+		else
+		{
+			action = SCAN_ACTION_NONE;
 		}
 	}
 
-#if defined(CONFIG_BT_PER_ADV_SYNC)
-	if (get_pending_per_adv_sync()) {
-		/* Start/Restart the scanner. */
-		return start_host_initiated_scan(fast_scan);
+	printk("do the action %u\n", action);
+	/* start/stop/update if required and allowed */
+	switch(action)
+	{
+		case SCAN_ACTION_NONE:
+			break;
+		case SCAN_ACTION_STOP:
+			err = bt_le_scan_set_enable(BT_HCI_LE_SCAN_DISABLE);
+			if (err) {
+				/* not setting back the enable reason should be fine in this case. */
+				return err;
+			}
+			memset(&bt_dev.scanner_state.used_scan_param, 0x0, sizeof(bt_dev.scanner_state.used_scan_param));
+			break;
+		case SCAN_ACTION_UPDATE:
+			err = bt_le_scan_set_enable(BT_HCI_LE_SCAN_DISABLE);
+			if (err) {
+				atomic_clear_bit(bt_dev.scanner_state.scan_flags, enable_reason);
+				return err;
+			}
+			/* FALLTHROUGH */
+		case SCAN_ACTION_START:
+			err = start_scan(&scan_param);
+			if (err) {
+				atomic_clear_bit(bt_dev.scanner_state.scan_flags, enable_reason);
+			}
+			memcpy(&bt_dev.scanner_state.used_scan_param, &scan_param, sizeof(scan_param));
+			break;
 	}
-#endif
+
+	printk("done\n");
 
 	return 0;
 }
@@ -381,7 +490,7 @@ static void check_pending_conn(const bt_addr_le_t *id_addr,
 	struct bt_conn *conn;
 
 	/* No connections are allowed during explicit scanning */
-	if (atomic_test_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN)) {
+	if (atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_EXPLICIT_SCAN)) {
 		return;
 	}
 
@@ -396,12 +505,8 @@ static void check_pending_conn(const bt_addr_le_t *id_addr,
 		return;
 	}
 
-	if (!BT_LE_STATES_SCAN_INIT(bt_dev.le.states)) {
-		if (atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING) &&
-		   bt_le_scan_set_enable(BT_HCI_LE_SCAN_DISABLE)) {
-			goto failed;
-		}
-	}
+	/* Stop the scanner if there is no other reason to have it running. */
+	bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SCAN_BEFORE_INITIATE, false);
 
 	bt_addr_le_copy(&conn->le.resp_addr, addr);
 	if (bt_le_create_conn(conn)) {
@@ -416,7 +521,7 @@ failed:
 	conn->err = BT_HCI_ERR_UNSPECIFIED;
 	bt_conn_set_state(conn, BT_CONN_DISCONNECTED);
 	bt_conn_unref(conn);
-	bt_le_scan_update(false);
+	bt_le_scan_update_and_reconfigure(SCAN_UPDATE_JUST_CHECK, false);
 }
 #endif /* CONFIG_BT_CENTRAL */
 
@@ -463,7 +568,7 @@ static void le_adv_recv(bt_addr_le_t *addr, struct bt_le_scan_recv_info *info,
 
 	if (!IS_ENABLED(CONFIG_BT_PRIVACY) &&
 	    !IS_ENABLED(CONFIG_BT_SCAN_WITH_IDENTITY) &&
-	    atomic_test_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN) &&
+	    atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_EXPLICIT_SCAN) &&
 	    (info->adv_props & BT_HCI_LE_ADV_PROP_DIRECT)) {
 		LOG_DBG("Dropped direct adv report");
 		return;
@@ -513,8 +618,7 @@ void bt_hci_le_scan_timeout(struct net_buf *buf)
 {
 	struct bt_le_scan_cb *listener, *next;
 
-	atomic_clear_bit(bt_dev.flags, BT_DEV_SCANNING);
-	atomic_clear_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN);
+	bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_EXPLICIT_SCAN, false);
 
 	atomic_clear_bit(bt_dev.flags, BT_DEV_SCAN_LIMITED);
 	atomic_clear_bit(bt_dev.flags, BT_DEV_RPA_VALID);
@@ -992,7 +1096,7 @@ static void bt_hci_le_per_adv_sync_established_common(struct net_buf *buf)
 	if (pending_per_adv_sync) {
 		atomic_clear_bit(pending_per_adv_sync->flags,
 				 BT_PER_ADV_SYNC_SYNCING);
-		err = bt_le_scan_update(false);
+		err = bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SYNC_SYNCING, false);
 
 		if (err) {
 			LOG_ERR("Could not update scan (%d)", err);
@@ -1482,8 +1586,6 @@ static bool valid_le_scan_param(const struct bt_le_scan_param *param)
 
 int bt_le_scan_start(const struct bt_le_scan_param *param, bt_le_scan_cb_t cb)
 {
-	int err;
-
 	if (!atomic_test_bit(bt_dev.flags, BT_DEV_READY)) {
 		return -EAGAIN;
 	}
@@ -1497,85 +1599,15 @@ int bt_le_scan_start(const struct bt_le_scan_param *param, bt_le_scan_cb_t cb)
 		return -EINVAL;
 	}
 
-	/* Return if active scan is already enabled */
-	if (atomic_test_and_set_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN)) {
-		return -EALREADY;
-	}
-
-	if (atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING)) {
-		err = bt_le_scan_set_enable(BT_HCI_LE_SCAN_DISABLE);
-		if (err) {
-			atomic_clear_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN);
-			return err;
-		}
-	}
-
-	atomic_set_bit_to(bt_dev.flags, BT_DEV_SCAN_FILTER_DUP,
-			  param->options & BT_LE_SCAN_OPT_FILTER_DUPLICATE);
-
-#if defined(CONFIG_BT_FILTER_ACCEPT_LIST)
-	atomic_set_bit_to(bt_dev.flags, BT_DEV_SCAN_FILTERED,
-			  param->options & BT_LE_SCAN_OPT_FILTER_ACCEPT_LIST);
-#endif /* defined(CONFIG_BT_FILTER_ACCEPT_LIST) */
-
-	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
-	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
-		struct bt_hci_ext_scan_phy param_1m;
-		struct bt_hci_ext_scan_phy param_coded;
-
-		struct bt_hci_ext_scan_phy *phy_1m = NULL;
-		struct bt_hci_ext_scan_phy *phy_coded = NULL;
-
-		if (!(param->options & BT_LE_SCAN_OPT_NO_1M)) {
-			param_1m.type = param->type;
-			param_1m.interval = sys_cpu_to_le16(param->interval);
-			param_1m.window = sys_cpu_to_le16(param->window);
-
-			phy_1m = &param_1m;
-		}
-
-		if (param->options & BT_LE_SCAN_OPT_CODED) {
-			uint16_t interval = param->interval_coded ?
-				param->interval_coded :
-				param->interval;
-			uint16_t window = param->window_coded ?
-				param->window_coded :
-				param->window;
-
-			param_coded.type = param->type;
-			param_coded.interval = sys_cpu_to_le16(interval);
-			param_coded.window = sys_cpu_to_le16(window);
-			phy_coded = &param_coded;
-		}
-
-		err = start_le_scan_ext(phy_1m, phy_coded, param->timeout);
-	} else {
-		if (param->timeout) {
-			atomic_clear_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN);
-			return -ENOTSUP;
-		}
-
-		err = start_le_scan_legacy(param->type, param->interval,
-					   param->window);
-	}
-
-	if (err) {
-		atomic_clear_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN);
-		return err;
-	}
+	/* store the parameters that were used to start the scanner */
+	memcpy(&bt_dev.scanner_state.explicit_scan_param, param, sizeof(bt_dev.scanner_state.explicit_scan_param));
 
 	scan_dev_found_cb = cb;
-
-	return 0;
+	return bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_EXPLICIT_SCAN, true);
 }
 
 int bt_le_scan_stop(void)
 {
-	/* Return if active scanning is already disabled */
-	if (!atomic_test_and_clear_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN)) {
-		return -EALREADY;
-	}
-
 	bt_scan_reset();
 
 	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
@@ -1587,7 +1619,7 @@ int bt_le_scan_stop(void)
 #endif
 	}
 
-	return bt_le_scan_update(false);
+	return bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_EXPLICIT_SCAN, false);
 }
 
 void bt_le_scan_cb_register(struct bt_le_scan_cb *cb)
@@ -1753,13 +1785,10 @@ int bt_le_per_adv_sync_create(const struct bt_le_per_adv_sync_param *param,
 	 * established. We don't need to use any callbacks since we rely on
 	 * the advertiser address in the sync params.
 	 */
-	if (!atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING)) {
-		err = bt_le_scan_update(true);
-
-		if (err) {
-			bt_le_per_adv_sync_delete(per_adv_sync);
-			return err;
-		}
+	err = bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SYNC_SYNCING, true);
+	if (err) {
+		bt_le_per_adv_sync_delete(per_adv_sync);
+		return err;
 	}
 
 	*out_sync = per_adv_sync;
