@@ -22,6 +22,7 @@ int main(void)
 	struct video_caps caps;
 	const struct device *video;
 	unsigned int frame = 0;
+	unsigned int framelen = 0;
 	size_t bsize;
 	int i = 0;
 
@@ -110,8 +111,20 @@ int main(void)
 			return 0;
 		}
 
-		printk("\rGot frame %u! size: %u; timestamp %u ms",
-		       frame++, vbuf->bytesused, vbuf->timestamp);
+		/* Account for this vbuf in the total frame length */
+		framelen += vbuf->bytesused;
+
+		if (vbuf->flags == VIDEO_BUF_EOF) {
+			if (framelen != vbuf->bytesframe) {
+				LOG_ERR("Total vbuf size %u does not match "
+					"frame size %u", framelen,
+					vbuf->bytesframe);
+				return 0;
+			}
+			printk("\rGot frame %u! size: %u; timestamp %u ms",
+			       frame++, vbuf->bytesframe, vbuf->timestamp);
+			framelen = 0;
+		}
 
 		err = video_enqueue(video, VIDEO_EP_OUT, vbuf);
 		if (err) {
