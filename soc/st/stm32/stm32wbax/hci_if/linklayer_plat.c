@@ -295,6 +295,26 @@ void LINKLAYER_PLAT_StopRadioEvt(void)
 	scm_notifyradiostate(SCM_RADIO_NOT_ACTIVE);
 }
 
+/**
+  * @brief  Link Layer notification for RCO calibration start.
+  * @param  None
+  * @retval None
+  */
+void LINKLAYER_PLAT_RCOStartClbr(void)
+{
+/* Required only for RCO module usage in the context of LSI2 calibration */
+}
+
+/**
+  * @brief  Link Layer notification for RCO calibration end.
+  * @param  None
+  * @retval None
+  */
+void LINKLAYER_PLAT_RCOStopClbr(void)
+{
+/* Required only for RCO module usage in the context of LSI2 calibration */
+}
+
 void LINKLAYER_PLAT_RequestTemperature(void) {}
 
 void LINKLAYER_PLAT_SCHLDR_TIMING_UPDATE_NOT(Evnt_timing_t *p_evnt_timing) {}
