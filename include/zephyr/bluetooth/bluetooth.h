@@ -950,9 +950,36 @@ struct bt_le_per_adv_param {
 			BT_GAP_ADV_FAST_INT_MAX_2, NULL)                                           \
 	__DEPRECATED_MACRO
 
-/** This is the recommended default for connectable advertisers.
+/** @brief GAP recommended connectable advertising
+ *
+ * This is the recommended default for connectable advertisers
+ * for interactive discovery that a human is waiting on.
+ *
+ * This is recommended for limited discoverable mode.
+ *
+ * Use a different interval to conserve battery. Consider
+ * switching modes after a timeout.
+ *
+ * GAP recommends this to be user-initiated. It is up to the app
+ * to decide what interactions initiate this. It can by any time
+ * the user interacts with the device, or a special mode
+ * activated by a Bluetooth-logo button, or anything in-between.
+ *
+ * See Core Spec, Vol 3, Table A.1 "Defined GAP timers",
+ * T_GAP(adv_fast_interval1).
  */
-#define BT_LE_ADV_CONN_ONE_TIME                                                                    \
+#define BT_LE_ADV_CONN_FAST_1                                                                      \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, BT_GAP_ADV_FAST_INT_MIN_1, BT_GAP_ADV_FAST_INT_MAX_1,  \
+			NULL)
+
+/** @brief GAP fast 2 connectable advertising
+ *
+ * This corresponds to the default in Zephyr 3.6 and earlier.
+ *
+ * See Core Spec, Vol 3, Table A.1 "Defined GAP timers",
+ * T_GAP(adv_fast_interval2).
+ */
+#define BT_LE_ADV_CONN_FAST_2                                                                      \
 	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2,  \
 			NULL)
 
