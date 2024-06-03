@@ -48,6 +48,14 @@ static enum smartbond_clock smartbond_source_clock(enum smartbond_clock clk);
 static K_WORK_DELAYABLE_DEFINE(calibration_work, calibration_work_cb);
 static K_WORK_DELAYABLE_DEFINE(xtal32k_settle_work, xtal32k_settle_work_cb);
 
+/* PLL can be turned on by requesting it explicitly or when USB is attached */
+/* PLL requested in DT or manually by application */
+#define PLL_REQUEST_PLL		1
+/* PLL requested indirectly by USB driver */
+#define PLL_REQUEST_USB		2
+/* Keeps information about blocks that requested PLL */
+static uint8_t pll_requests;
+
 static void calibration_work_cb(struct k_work *work)
 {
 	if (lpc_clock_state.rcx_started) {
@@ -169,7 +177,9 @@ static inline int smartbond_clock_control_on(const struct device *dev,
 		da1469x_clock_sys_xtal32m_init();
 		da1469x_clock_sys_xtal32m_enable();
 		break;
+	case SMARTBOND_CLK_USB:
 	case SMARTBOND_CLK_PLL96M:
+		pll_requests = 1 << (clk - SMARTBOND_CLK_PLL96M);
 		if ((CRG_TOP->CLK_CTRL_REG & CRG_TOP_CLK_CTRL_REG_RUNNING_AT_PLL96M_Msk) == 0) {
 			if ((CRG_TOP->CLK_CTRL_REG &
 			     CRG_TOP_CLK_CTRL_REG_RUNNING_AT_XTAL32M_Msk) == 0) {
@@ -178,6 +188,9 @@ static inline int smartbond_clock_control_on(const struct device *dev,
 				da1469x_clock_sys_xtal32m_wait_to_settle();
 			}
 			da1469x_clock_sys_pll_enable();
+			if (pll_requests & PLL_REQUEST_USB) {
+				CRG_TOP->CLK_CTRL_REG &= ~CRG_TOP_CLK_CTRL_REG_USB_CLK_SRC_Msk;
+			}
 		}
 		break;
 	default:
@@ -231,8 +244,15 @@ static inline int smartbond_clock_control_off(const struct device *dev,
 		da1469x_clock_sys_xtal32m_init();
 		da1469x_clock_sys_xtal32m_enable();
 		break;
+	case SMARTBOND_CLK_USB:
+		/* Switch USB clock to HCLK to allow for resume */
+		CRG_TOP->CLK_CTRL_REG |= CRG_TOP_CLK_CTRL_REG_USB_CLK_SRC_Msk;
+		__fallthrough;
 	case SMARTBOND_CLK_PLL96M:
-		da1469x_clock_sys_pll_disable();
+		pll_requests &= ~(1 << (clk - SMARTBOND_CLK_PLL96M));
+		if (pll_requests == 0) {
+			da1469x_clock_sys_pll_disable();
+		}
 		break;
 	default:
 		return -ENOTSUP;
@@ -290,6 +310,9 @@ static int smartbond_clock_get_rate(enum smartbond_clock clk, uint32_t *rate)
 		break;
 	case SMARTBOND_CLK_PLL96M:
 		*rate = DT_PROP(DT_NODELABEL(pll), clock_frequency);
+		break;
+	case SMARTBOND_CLK_USB:
+		*rate = 48000000;
 		break;
 	default:
 		return -ENOTSUP;
