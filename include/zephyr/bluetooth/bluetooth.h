@@ -518,6 +518,13 @@ enum {
 	/**
 	 * @brief Advertise as connectable.
 	 *
+	 * @deprecated Use @ref BT_LE_ADV_OPT_CONN instead.
+	 *
+	 * entirety of the old automatic resume feature is deprecated.
+	 * Applications should instead choose an implementation of an
+	 * advertiser manager that fits their use case. See the extended
+	 * advertising sample for an example.
+	 *
 	 * Advertise as connectable. If not connectable then the type of
 	 * advertising is determined by providing scan response data.
 	 * The advertiser address is determined by the type of advertising
@@ -527,24 +534,18 @@ enum {
 	 * object. If this fails, the API returns @c -ENOMEM.
 	 *
 	 * When an advertiser set results in a connection creation, the
-	 * controller will automatically disable that advertising set.
+	 * controller automatically disables that advertising set.
 	 *
 	 * If the advertising set was started with @ref bt_le_adv_start
 	 * without @ref BT_LE_ADV_OPT_ONE_TIME, the host will attempt to
-	 * resume the advertiser under some conditions. This behavior is
-	 * deprecated and will be removed in the future.
+	 * resume the advertiser under some conditions.
 	 */
 	BT_LE_ADV_OPT_CONNECTABLE = BIT(0),
 
 	/**
 	 * @brief Advertise one time.
 	 *
-	 * This option is now mandatory for non-directed connectable
-	 * advertisers when using @ref bt_le_adv_start. This means the
-	 * entirety of the old automatic resume feature is deprecated.
-	 * Applications should instead choose an implementation of an
-	 * advertiser manager that fits their use case. See the extended
-	 * advertising sample for an example.
+	 * @deprecated Use @ref BT_LE_ADV_OPT_CONN instead.
 	 *
 	 * Don't try to resume connectable advertising after a connection.
 	 * This option is only meaningful when used together with
@@ -742,6 +743,25 @@ enum {
 	 * @note Mutually exclusive with BT_LE_ADV_OPT_USE_IDENTITY.
 	 */
 	BT_LE_ADV_OPT_USE_NRPA = BIT(19),
+
+	/**
+	 * @brief Connectable advertising
+	 *
+	 * Starting connectable advertising preallocates a connection
+	 * object. If this fails, the API returns @c -ENOMEM.
+	 *
+	 * The advertising set stops immediately after it creates a
+	 * connection. This happens automatically in the controller.
+	 *
+	 * @note To continue advertising after a connection is created,
+	 * the application should listen for the @ref conn_cb.connected
+	 * event and start the advertising set as if it was disabled by
+	 * the application. To continue after a disconnection, listen
+	 * for @ref conn_cb.recycled. Note that the advertiser cannot be
+	 * started when all connection objects are in use. In that case,
+	 * defer starting the advertiser until @ref conn_cb.recycled.
+	 */
+	BT_LE_ADV_OPT_CONN = BIT(20),
 };
 
 /** LE Advertising Parameters. */
