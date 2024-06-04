@@ -11,6 +11,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "zephyr/sys_clock.h"
 #define DT_DRV_COMPAT nxp_enet_mac
 
 /* Set up logging module for this driver */
@@ -62,8 +63,9 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define ETH_NXP_ENET_UNIQUE_ID	(OCOTP->FUSEN[40].FUSE)
 #elif defined(CONFIG_SOC_SERIES_KINETIS_K6X)
 #define ETH_NXP_ENET_UNIQUE_ID	(SIM->UIDH ^ SIM->UIDMH ^ SIM->UIDML ^ SIM->UIDL)
+#elif defined(CONFIG_SOC_SERIES_RW6XX)
+#define ETH_NXP_ENET_UNIQUE_ID	(OCOTP->OTP_SHADOW[46])
 #else
-#define ETH_NXP_ENET_UNIQUE_ID 0xFFFFFF
 #error "Unsupported SOC"
 #endif
 
