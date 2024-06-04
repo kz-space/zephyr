@@ -13,6 +13,7 @@
 #ifndef __AUDIO_H
 #define __AUDIO_H
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -667,7 +668,7 @@ static inline void print_codec_cap(const struct shell *sh, size_t indent,
 						  (enum bt_audio_codec_cap_frame_dur)ret);
 		}
 
-		ret = bt_audio_codec_cap_get_supported_audio_chan_counts(codec_cap);
+		ret = bt_audio_codec_cap_get_supported_audio_chan_counts(codec_cap, true);
 		if (ret >= 0) {
 			print_codec_cap_chan_count(sh, indent,
 						   (enum bt_audio_codec_cap_chan_count)ret);
@@ -678,7 +679,7 @@ static inline void print_codec_cap(const struct shell *sh, size_t indent,
 			print_codec_cap_octets_per_codec_frame(sh, indent, &codec_frame);
 		}
 
-		ret = bt_audio_codec_cap_get_max_codec_frames_per_sdu(codec_cap);
+		ret = bt_audio_codec_cap_get_max_codec_frames_per_sdu(codec_cap, true);
 		if (ret >= 0) {
 			print_codec_cap_max_codec_frames_per_sdu(sh, indent, (uint8_t)ret);
 		}
@@ -904,8 +905,8 @@ static inline void print_codec_cfg(const struct shell *sh, size_t indent,
 						  (enum bt_audio_codec_cfg_frame_dur)ret);
 		}
 
-		ret = bt_audio_codec_cfg_get_chan_allocation(codec_cfg, &chan_allocation);
-		if (ret >= 0) {
+		ret = bt_audio_codec_cfg_get_chan_allocation(codec_cfg, &chan_allocation, false);
+		if (ret == 0) {
 			print_codec_cfg_chan_allocation(sh, indent, chan_allocation);
 		}
 
@@ -942,7 +943,7 @@ static inline void print_codec_cfg(const struct shell *sh, size_t indent,
 		const uint8_t *data;
 		int ret;
 
-		ret = bt_audio_codec_cfg_meta_get_pref_context(codec_cfg);
+		ret = bt_audio_codec_cfg_meta_get_pref_context(codec_cfg, true);
 		if (ret >= 0) {
 			print_codec_meta_pref_context(sh, indent, (enum bt_audio_context)ret);
 		}
