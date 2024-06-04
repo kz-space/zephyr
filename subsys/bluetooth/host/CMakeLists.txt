@@ -111,6 +111,6 @@ endif()
 # Bluetooth Mesh has test dependencies in the host.
 # In order to compile Bsim tests with these test features
 # and PSA enabled, the libraries must be linked.
-if(CONFIG_BT_MESH AND CONFIG_BT_TESTING)
+if((CONFIG_BT_MESH AND CONFIG_BT_TESTING) OR CONFIG_BT_USE_PSA_API)
   zephyr_library_link_libraries_ifdef(CONFIG_MBEDTLS mbedTLS)
 endif()
