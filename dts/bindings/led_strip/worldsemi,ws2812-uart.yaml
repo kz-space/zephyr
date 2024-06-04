@@ -1,0 +1,51 @@
+# Copyright (c) 2024 Croxel, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Worldsemi WS2812 LED strip, UART binding
+
+  Driver bindings for controlling a WS2812 or compatible LED
+  strip with a UART.
+
+  The UART driver should be usable as long as a zephyr UART API driver is available for your
+  board and has tx-invert property available and enabled.
+  Hardware specific tuning is required using these properties:
+
+    - uart-baudrate
+    - data-bits
+
+  Data serialisation explanation for WS2812:
+  3 pulses/bits of UART are used to represent one bit of RGB data. During the development of this
+  driver, I was using an ESP32C3 MCU with its UART baud rate set to 2.5Mbits per sec. Hence, 1
+  bit equals 400ns. For WS2812 timing details, please refer to its datasheet.
+  Link: https://cdn-shop.adafruit.com/datasheets/WS2812.pdf
+  We can represent logic 1 with 0b110 (first two bits high, remaining one bit low), and logic
+  0 with 0b100 (first bit high, remaining two bits low). We also need to invert the polarity
+  of UART pins because in default, the idle TX line is high, but WS2812 or similar LEDs need
+  the idle line to be low, otherwise, it will misinterpret. When we make the TX line inverted,
+  the start bit will be low to high and the stop bit will be high to low. Hence, the nine bits
+  we are sending in one go will always have 1 at the start and 0 at the end, we just need to
+  calculate middle 7 bits. Also, keep in mind that UART always sends the MSB first. Keeping all
+  this data in mind, I created a lookup table to ease the calculations.
+
+compatible: "worldsemi,ws2812-uart"
+
+include: [uart-controller.yaml, ws2812.yaml]
+
+properties:
+  bits-per-rgb-bit:
+    type: int
+    required: true
+    description: |
+      Total number of bits representing single RGB data bit.
+
+  lookup-table:
+    type: array
+    required: true
+    description: |
+      Lookup data that will be used to encode
+      RGB data bits into UART streams.
+
+      For example, when setting this driver for WS2812, used 7 UART data bits and 3 bits
+      to represent single RGB data bit, below table was used:
+      lookup-table = <0x5B 0x1B 0x53 0x13 0x5A 0x1A 0x52 0x12>;
