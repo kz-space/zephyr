@@ -38,8 +38,13 @@
 
 #define INVALID_BROADCAST_ID 0xFFFFFFFFU
 
+#define MAX_BROADCASTNAME_LEN 32
+#define MIN_BROADCASTNAME_LEN 3
+
 static uint8_t received_base[UINT8_MAX];
 static uint8_t received_base_size;
+
+static bool scan_cbs_registered;
 
 static struct bt_auto_scan {
 	uint32_t broadcast_id;
@@ -47,6 +52,16 @@ static struct bt_auto_scan {
 	struct bt_bap_bass_subgroup subgroup;
 } auto_scan = {
 	.broadcast_id = INVALID_BROADCAST_ID,
+};
+
+static struct bt_broadcast_name_scan {
+	char addr_str[BT_ADDR_LE_STR_LEN];
+	char broadcast_name[MAX_BROADCASTNAME_LEN + 1];
+	bool broadcast_name_is_matched;
+} broadcast_name_scan = {
+	.addr_str = { 0 },
+	.broadcast_name = { 0 },
+	.broadcast_name_is_matched = false,
 };
 
 static bool pa_decode_base(struct bt_data *data, void *user_data)
@@ -498,7 +513,31 @@ static bool broadcast_source_found(struct bt_data *data, void *user_data)
 	char addr_str[BT_ADDR_LE_STR_LEN];
 	struct bt_uuid_16 adv_uuid;
 	uint32_t broadcast_id;
+	char broadcast_name[MAX_BROADCASTNAME_LEN + 1] = { 0 };
+	size_t broadcast_name_length = 0;
+	bool found_matched_broadcast_id = false;
+	bool found_matched_broadcast_name = false;
 	int err;
+
+	bt_addr_le_to_str(info->addr, addr_str, sizeof(addr_str));
+
+	/* Check for matched broadcast name (in case of add_by_broadcast_name) */
+	if (data->type == BT_DATA_BROADCAST_NAME) {
+		if (broadcast_name_scan.broadcast_name[0] != '\0') {
+			broadcast_name_length = (data->data_len < sizeof(broadcast_name)) ?
+				data->data_len : sizeof(broadcast_name) - 1;
+			memcpy(broadcast_name, data->data, broadcast_name_length);
+			if (!strncmp(broadcast_name, broadcast_name_scan.broadcast_name,
+					broadcast_name_length)) {
+				broadcast_name_scan.broadcast_name_is_matched = true;
+				memcpy(broadcast_name_scan.addr_str, addr_str, strlen(addr_str));
+				broadcast_name_scan.addr_str[strlen(addr_str) + 1] = '\0';
+				shell_print(ctx_shell,
+						"Found matched broadcast name %s with address %s",
+							broadcast_name, addr_str);
+			}
+		}
+	}
 
 	/* Verify that it is a BAP broadcaster*/
 
@@ -519,13 +558,19 @@ static bool broadcast_source_found(struct bt_data *data, void *user_data)
 	}
 
 	broadcast_id = sys_get_le24(data->data + BT_UUID_SIZE_16);
+	found_matched_broadcast_id = (broadcast_id == auto_scan.broadcast_id);
 
-	if (broadcast_id != auto_scan.broadcast_id) {
+	if (broadcast_name_scan.broadcast_name_is_matched) {
+		if (!strncmp(broadcast_name_scan.addr_str, addr_str, strlen(addr_str))) {
+			found_matched_broadcast_name = true;
+		}
+	}
+
+	if (!found_matched_broadcast_id && !found_matched_broadcast_name) {
 		/* Not the one we want */
 		return false;
 	}
 
-	bt_addr_le_to_str(info->addr, addr_str, sizeof(addr_str));
 	shell_print(ctx_shell, "Found BAP broadcast source with address %s and ID 0x%06X\n",
 		    addr_str, broadcast_id);
 
@@ -550,13 +595,20 @@ static bool broadcast_source_found(struct bt_data *data, void *user_data)
 	memset(&auto_scan, 0, sizeof(auto_scan));
 	auto_scan.broadcast_id = INVALID_BROADCAST_ID;
 
+	memset(broadcast_name_scan.addr_str, 0, sizeof(broadcast_name_scan.addr_str));
+	memset(broadcast_name_scan.broadcast_name, 0, sizeof(broadcast_name_scan.broadcast_name));
+	broadcast_name_scan.broadcast_name_is_matched = false;
+
+	scan_cbs_registered = false;
+
 	return false;
 }
 
 static void scan_recv_cb(const struct bt_le_scan_recv_info *info,
 			 struct net_buf_simple *ad)
 {
-	if (auto_scan.broadcast_id == INVALID_BROADCAST_ID) {
+	if ((auto_scan.broadcast_id == INVALID_BROADCAST_ID) &&
+		(broadcast_name_scan.broadcast_name[0] == '\0')) {
 		/* no op */
 		return;
 	}
@@ -582,6 +634,12 @@ static void scan_timeout_cb(void)
 		memset(&auto_scan, 0, sizeof(auto_scan));
 		auto_scan.broadcast_id = INVALID_BROADCAST_ID;
 	}
+
+	memset(broadcast_name_scan.addr_str, 0, sizeof(broadcast_name_scan.addr_str));
+	memset(broadcast_name_scan.broadcast_name, 0, sizeof(broadcast_name_scan.broadcast_name));
+	broadcast_name_scan.broadcast_name_is_matched = false;
+
+	scan_cbs_registered = false;
 }
 
 static struct bt_le_scan_cb scan_callbacks = {
@@ -594,7 +652,6 @@ static int cmd_bap_broadcast_assistant_add_broadcast_id(const struct shell *sh,
 							char **argv)
 {
 	struct bt_bap_bass_subgroup subgroup = { 0 };
-	static bool scan_cbs_registered;
 	unsigned long broadcast_id;
 	int err = 0;
 
@@ -664,6 +721,87 @@ static int cmd_bap_broadcast_assistant_add_broadcast_id(const struct shell *sh,
 
 	/* Store results in the `auto_scan` struct */
 	auto_scan.broadcast_id = broadcast_id;
+	memcpy(&auto_scan.subgroup, &subgroup, sizeof(subgroup));
+
+	memset(broadcast_name_scan.addr_str, 0, sizeof(broadcast_name_scan.addr_str));
+	memset(broadcast_name_scan.broadcast_name, 0, sizeof(broadcast_name_scan.broadcast_name));
+	broadcast_name_scan.broadcast_name_is_matched = false;
+
+	return 0;
+}
+
+static int cmd_bap_broadcast_assistant_add_by_broadcast_name(const struct shell *sh,
+							size_t argc,
+							char **argv)
+{
+	struct bt_bap_bass_subgroup subgroup = { 0 };
+	char *broadcast_name;
+	int err = 0;
+
+	if (!scan_cbs_registered) {
+		bt_le_scan_cb_register(&scan_callbacks);
+		scan_cbs_registered = true;
+	}
+
+	broadcast_name = argv[1];
+	if ((strlen(broadcast_name) < MIN_BROADCASTNAME_LEN) ||
+		(strlen(broadcast_name) > MAX_BROADCASTNAME_LEN)) {
+		shell_error(sh, "Broadcast name should be minimum %d and maximum %d characters",
+				MIN_BROADCASTNAME_LEN, MAX_BROADCASTNAME_LEN);
+
+		return -ENOEXEC;
+	}
+
+	auto_scan.pa_sync = shell_strtobool(argv[2], 0, &err);
+	if (err != 0) {
+		shell_error(sh, "Could not parse pa_sync: %d", err);
+
+		return -ENOEXEC;
+	}
+
+	/* TODO: Support multiple subgroups */
+	if (argc > 3) {
+		const unsigned long bis_sync = shell_strtoul(argv[3], 0, &err);
+
+		if (err != 0) {
+			shell_error(sh, "failed to parse bis_sync: %d", err);
+
+			return -ENOEXEC;
+		} else if (!VALID_BIS_SYNC(bis_sync)) {
+			shell_error(sh, "Invalid bis_sync: %lu", bis_sync);
+
+			return -ENOEXEC;
+		}
+
+		subgroup.bis_sync = bis_sync;
+	}
+
+	if (argc > 4) {
+		subgroup.metadata_len = hex2bin(argv[4], strlen(argv[4]), subgroup.metadata,
+						sizeof(subgroup.metadata));
+
+		if (subgroup.metadata_len == 0U) {
+			shell_error(sh, "Could not parse metadata");
+
+			return -ENOEXEC;
+		}
+	}
+
+	err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, NULL);
+	if (err) {
+		shell_print(sh, "Fail to start scanning: %d", err);
+
+		return -ENOEXEC;
+	}
+
+	/* Store results in the `broadcast_name_scan` struct */
+	memcpy(broadcast_name_scan.broadcast_name, broadcast_name, strlen(broadcast_name));
+	broadcast_name_scan.broadcast_name[strlen(broadcast_name) + 1] = '\0';
+	memset(broadcast_name_scan.addr_str, 0, sizeof(broadcast_name_scan.addr_str));
+	broadcast_name_scan.broadcast_name_is_matched = false;
+
+	/* Store results in the `auto_scan` struct */
+	auto_scan.broadcast_id = INVALID_BROADCAST_ID;
 	memcpy(&auto_scan.subgroup, &subgroup, sizeof(subgroup));
 
 	return 0;
@@ -1067,6 +1205,10 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 		      "Add a source by broadcast ID <broadcast_id> <sync_pa> "
 		      "[<sync_bis>] [<metadata>]",
 		      cmd_bap_broadcast_assistant_add_broadcast_id, 3, 2),
+	SHELL_CMD_ARG(add_by_broadcast_name, NULL,
+		      "Add a source by broadcast name <broadcast_name> <sync_pa> "
+		      "[<sync_bis>] [<metadata>]",
+		      cmd_bap_broadcast_assistant_add_by_broadcast_name, 3, 2),
 	SHELL_CMD_ARG(add_pa_sync, NULL,
 		      "Add a PA sync as a source <sync_pa> <broadcast_id> "
 		      "[bis_index [bis_index [bix_index [...]]]]>",
