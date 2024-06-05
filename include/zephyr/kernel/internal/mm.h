@@ -243,8 +243,6 @@ void z_phys_unmap(uint8_t *virt, size_t size);
  *
  * @see k_mem_map() for additional information if called via that.
  *
- * @see k_mem_phys_map() for additional information if called via that.
- *
  * @param phys Physical address base of the memory region if not requesting
  *             anonymous memory. Must be page-aligned.
  * @param size Size of the memory mapping. This must be page-aligned.
@@ -267,8 +265,6 @@ void *mm_memmap_phys_guard_map(uintptr_t phys, size_t size, uint32_t flags, bool
  * for the kernel.
  *
  * @see k_mem_unmap() for additional information if called via that.
- *
- * @see k_mem_phys_unmap() for additional information if called via that.
  *
  * @note Calling this function on a region which was not mapped via
  *       mm_memmap_phys_guard_map() to begin with is undefined behavior.
