@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <zephyr/dt-bindings/memory-attr/memory-attr.h>
 
 / {
 	reserved-memory {
@@ -92,6 +93,31 @@
 			};
 		};
 
+		shared_ram21_region: memory@2f890000 {
+			reg = <0x2f890000 DT_SIZE_K(64)>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x2f890000 0x10000>;
+
+			cpuapp_dma_fast_region: memory@8000 {
+				compatible = "zephyr,memory-region";
+				reg = <0x8000 DT_SIZE_K(16)>;
+				status = "disabled";
+				#memory-region-cells = <0>;
+				zephyr,memory-region = "DMA_RAM2x_APP";
+				zephyr,memory-attr = <( DT_MEM_DMA | DT_MEM_CACHEABLE )>;
+			};
+
+			cpurad_dma_fast_region: memory@c000 {
+				compatible = "zephyr,memory-region";
+				reg = <0xc000 DT_SIZE_K(16)>;
+				status = "disabled";
+				#memory-region-cells = <0>;
+				zephyr,memory-region = "DMA_RAM2x_RAD";
+				zephyr,memory-attr = <( DT_MEM_DMA | DT_MEM_CACHEABLE )>;
+			};
+		};
+
 		cpuppr_ram3x_region: memory@2fc00000 {
 			compatible = "nordic,owned-memory";
 			reg = <0x2fc00000 DT_SIZE_K(64)>;
@@ -132,6 +158,7 @@
 				status = "disabled";
 				#memory-region-cells = <0>;
 				zephyr,memory-region = "DMA_RAM3x_APP";
+				zephyr,memory-attr = <( DT_MEM_DMA )>;
 			};
 
 			cpurad_dma_region: memory@1e80 {
@@ -140,6 +167,7 @@
 				status = "disabled";
 				#memory-region-cells = <0>;
 				zephyr,memory-region = "DMA_RAM3x_RAD";
+				zephyr,memory-attr = <( DT_MEM_DMA )>;
 			};
 		};
 	};
