@@ -943,7 +943,9 @@ struct bt_le_per_adv_param {
 
 /**
  * @deprecated This is a convenience macro for @ref
- * BT_LE_ADV_OPT_CONNECTABLE, which is deprecated.
+ * BT_LE_ADV_OPT_CONNECTABLE, which is deprecated. Please use
+ * @ref BT_LE_ADV_CONN_FAST_1 or @ref BT_LE_ADV_CONN_FAST_2
+ * instead.
  */
 #define BT_LE_ADV_CONN                                                                             \
 	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, BT_GAP_ADV_FAST_INT_MIN_2,                      \
@@ -972,12 +974,13 @@ struct bt_le_per_adv_param {
 	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, BT_GAP_ADV_FAST_INT_MIN_1, BT_GAP_ADV_FAST_INT_MAX_1,  \
 			NULL)
 
-/** @brief Connectable advertising with T_GAP(adv_fast_interval2)
+/** @brief Connectable advertising with
+ * T_GAP(adv_fast_interval2)
  *
- * This corresponds to what was offered as `BT_LE_ADV_CONN` in
- * Zephyr 3.6 and earlier, except the host does not
- * automatically resume the advertiser after it results in a
- * connection.
+ * The advertising interval corresponds to what was offered as
+ * `BT_LE_ADV_CONN` in Zephyr 3.6 and earlier, but unlike
+ * `BT_LE_ADV_CONN`, the host does not automatically resume the
+ * advertiser after it results in a connection.
  *
  * See Core Spec, Vol 3, Table A.1 "Defined GAP timers",
  * T_GAP(adv_fast_interval2).
