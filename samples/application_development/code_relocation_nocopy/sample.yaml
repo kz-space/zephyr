@@ -9,6 +9,7 @@ tests:
       - stm32f769i_disco
       - stm32h7b3i_dk
       - b_u585i_iot02a
+      - stm32h573i_dk
     integration_platforms:
       - qemu_cortex_m3
     tags: linker
