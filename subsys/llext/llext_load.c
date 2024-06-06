@@ -543,6 +543,32 @@ static int llext_copy_symbols(struct llext_loader *ldr, struct llext *ext,
 }
 
 /*
+ * Free resources only used during loading. Also, in case an error was
+ * detected, free everything that was allocated.
+ */
+static void llext_load_cleanup(struct llext_loader *ldr, struct llext *ext, int ret)
+{
+	/* free resources only used during loading */
+	llext_free(ldr->sect_map);
+	ldr->sect_map = NULL;
+
+	if (!IS_ENABLED(CONFIG_LLEXT_LOG_LEVEL_DBG)) {
+		/* keep the computed symbol tables for debugging */
+		llext_free(ext->sym_tab.syms);
+		ext->sym_tab.sym_cnt = 0;
+		ext->sym_tab.syms = NULL;
+	}
+
+	if (ret != 0) {
+		/* free everything */
+		llext_free_sections(ext);
+		llext_free(ext->exp_tab.syms);
+		ext->exp_tab.sym_cnt = 0;
+		ext->exp_tab.syms = NULL;
+	}
+}
+
+/*
  * Load a valid ELF as an extension
  */
 int do_llext_load(struct llext_loader *ldr, struct llext *ext,
@@ -628,20 +654,14 @@ int do_llext_load(struct llext_loader *ldr, struct llext *ext,
 	}
 
 out:
-	llext_free(ldr->sect_map);
+	llext_load_cleanup(ldr, ext, ret);
 
 	if (ret != 0) {
-		LOG_DBG("Failed to load extension, freeing memory...");
-		llext_free_sections(ext);
-		llext_free(ext->exp_tab.syms);
+		LOG_DBG("Failed to load extension: %d", ret);
 	} else {
 		LOG_DBG("loaded module, .text at %p, .rodata at %p", ext->mem[LLEXT_MEM_TEXT],
 			ext->mem[LLEXT_MEM_RODATA]);
 	}
-
-	ext->sym_tab.sym_cnt = 0;
-	llext_free(ext->sym_tab.syms);
-	ext->sym_tab.syms = NULL;
 
 	return ret;
 }
