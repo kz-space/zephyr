@@ -215,9 +215,7 @@ int main(void)
 		.id = BT_ID_DEFAULT,
 		.sid = 0U,
 		.secondary_max_skip = 0U,
-		.options = (BT_LE_ADV_OPT_EXT_ADV |
-			    BT_LE_ADV_OPT_CONNECTABLE |
-			    BT_LE_ADV_OPT_CODED),
+		.options = (BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_CODED),
 		.interval_min = BT_GAP_ADV_FAST_INT_MIN_2,
 		.interval_max = BT_GAP_ADV_FAST_INT_MAX_2,
 		.peer = NULL,
