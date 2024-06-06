@@ -1,0 +1,6 @@
+tests:
+  bluetooth.hci:
+    integration_platforms:
+      - native_sim
+    tags:
+      - bluetooth
