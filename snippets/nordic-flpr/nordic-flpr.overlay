@@ -7,6 +7,6 @@
 	status = "okay";
 };
 
-&cpuflpr_vevif_remote {
+&mbox_cpuapp_tx_cpuflpr {
 	status = "okay";
 };
