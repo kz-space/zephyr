@@ -94,4 +94,10 @@
 			bias-pull-down;
 		};
 	};
+
+	pinmux_enet: pinmux_enet {
+		group0 {
+
+		}
+	}
 };
