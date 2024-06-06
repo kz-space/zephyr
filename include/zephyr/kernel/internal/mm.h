@@ -44,8 +44,27 @@
 #define MM_MEMMAP_VIRT_OFFSET	0
 #endif /* CONFIG_MMU */
 
-#define Z_MEM_PHYS_ADDR(virt)	((virt) - MM_MEMMAP_VIRT_OFFSET)
-#define Z_MEM_VIRT_ADDR(phys)	((phys) + MM_MEMMAP_VIRT_OFFSET)
+/**
+ * @brief Get physical address from virtual address.
+ *
+ * This only works in the kernel's permanent mapping of RAM.
+ *
+ * @param virt Virtual address
+ *
+ * @return Physical address.
+ */
+#define MM_MEMMAP_PHYS_ADDR(virt)	((virt) - MM_MEMMAP_VIRT_OFFSET)
+
+/**
+ * @brief Get virtual address from physical address.
+ *
+ * This only works in the kernel's permanent mapping of RAM.
+ *
+ * @param phys Physical address
+ *
+ * @return Virtual address.
+ */
+#define MM_MEMMAP_VIRT_ADDR(phys)	((phys) + MM_MEMMAP_VIRT_OFFSET)
 
 #if MM_MEMMAP_VIRT_OFFSET != 0
 #define Z_VM_KERNEL 1
@@ -61,8 +80,18 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/mem_manage.h>
 
-/* Just like Z_MEM_PHYS_ADDR() but with type safety and assertions */
-static inline uintptr_t z_mem_phys_addr(void *virt)
+/**
+ * @brief Get physical address from virtual address.
+ *
+ * This only works in the kernel's permanent mapping of RAM.
+ *
+ * Just like MM_MEMMAP_PHYS_ADDR() but with type safety and assertions.
+ *
+ * @param virt Virtual address
+ *
+ * @return Physical address.
+ */
+static inline uintptr_t mm_memmap_phys_addr(void *virt)
 {
 	uintptr_t addr = (uintptr_t)virt;
 
@@ -101,11 +130,21 @@ static inline uintptr_t z_mem_phys_addr(void *virt)
 	 * the above checks won't be sufficient with demand paging
 	 */
 
-	return Z_MEM_PHYS_ADDR(addr);
+	return MM_MEMMAP_PHYS_ADDR(addr);
 }
 
-/* Just like Z_MEM_VIRT_ADDR() but with type safety and assertions */
-static inline void *z_mem_virt_addr(uintptr_t phys)
+/**
+ * @brief Get virtual address from physical address.
+ *
+ * This only works in the kernel's permanent mapping of RAM.
+ *
+ * Just like MM_MEMMAP_VIRT_ADDR() but with type safety and assertions.
+ *
+ * @param phys Physical address
+ *
+ * @return Virtual address.
+ */
+static inline void *mm_memmap_virt_addr(uintptr_t phys)
 {
 #if defined(CONFIG_KERNEL_VM_USE_CUSTOM_MEM_RANGE_CHECK)
 	__ASSERT(sys_mm_is_phys_addr_in_range(phys),
@@ -128,7 +167,7 @@ static inline void *z_mem_virt_addr(uintptr_t phys)
 	 * the above check won't be sufficient with demand paging
 	 */
 
-	return (void *)Z_MEM_VIRT_ADDR(phys);
+	return (void *)MM_MEMMAP_VIRT_ADDR(phys);
 }
 
 #ifdef __cplusplus

@@ -60,11 +60,11 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_map_rw)
 	expect_fault = false;
 
 	/* Map in a page that allows writes */
-	mm_memmap_phys_bare_map(&mapped_rw, z_mem_phys_addr(buf),
+	mm_memmap_phys_bare_map(&mapped_rw, mm_memmap_phys_addr(buf),
 				BUF_SIZE, BASE_FLAGS | K_MEM_PERM_RW);
 
 	/* Map again this time only allowing reads */
-	mm_memmap_phys_bare_map(&mapped_ro, z_mem_phys_addr(buf),
+	mm_memmap_phys_bare_map(&mapped_ro, mm_memmap_phys_addr(buf),
 				BUF_SIZE, BASE_FLAGS);
 
 	/* Initialize read-write buf with some bytes */
@@ -138,7 +138,7 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_map_exec)
 	func = transplanted_function;
 
 	/* Now map with execution enabled and try to run the copied fn */
-	mm_memmap_phys_bare_map(&mapped_exec, z_mem_phys_addr(__test_mem_map_start),
+	mm_memmap_phys_bare_map(&mapped_exec, mm_memmap_phys_addr(__test_mem_map_start),
 				(uintptr_t)(__test_mem_map_end - __test_mem_map_start),
 				BASE_FLAGS | K_MEM_PERM_EXEC);
 
@@ -147,7 +147,7 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_map_exec)
 	zassert_true(executed, "function did not execute");
 
 	/* Now map without execution and execution should now fail */
-	mm_memmap_phys_bare_map(&mapped_ro, z_mem_phys_addr(__test_mem_map_start),
+	mm_memmap_phys_bare_map(&mapped_ro, mm_memmap_phys_addr(__test_mem_map_start),
 				(uintptr_t)(__test_mem_map_end - __test_mem_map_start),
 				BASE_FLAGS);
 
@@ -177,7 +177,7 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_map_side_effect)
 	 * Show that by mapping test_page to an RO region, we can still
 	 * modify test_page.
 	 */
-	mm_memmap_phys_bare_map(&mapped, z_mem_phys_addr(test_page),
+	mm_memmap_phys_bare_map(&mapped, mm_memmap_phys_addr(test_page),
 				sizeof(test_page), BASE_FLAGS);
 
 	/* Should NOT fault */
@@ -203,7 +203,7 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_unmap)
 	expect_fault = false;
 
 	/* Map in a page that allows writes */
-	mm_memmap_phys_bare_map(&mapped, z_mem_phys_addr(test_page),
+	mm_memmap_phys_bare_map(&mapped, mm_memmap_phys_addr(test_page),
 				sizeof(test_page), BASE_FLAGS | K_MEM_PERM_RW);
 
 	/* Should NOT fault */
@@ -230,7 +230,7 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_map_unmap_reclaim_addr)
 	uint8_t *buf = test_page + BUF_OFFSET;
 
 	/* Map the buffer the first time. */
-	mm_memmap_phys_bare_map(&mapped, z_mem_phys_addr(buf),
+	mm_memmap_phys_bare_map(&mapped, mm_memmap_phys_addr(buf),
 				BUF_SIZE, BASE_FLAGS);
 
 	printk("Mapped (1st time): %p\n", mapped);
@@ -251,7 +251,7 @@ ZTEST(mem_map, test_mm_memmap_phys_bare_map_unmap_reclaim_addr)
 	 * It should give us back the same virtual address
 	 * as above when it is mapped the first time.
 	 */
-	mm_memmap_phys_bare_map(&mapped, z_mem_phys_addr(buf),
+	mm_memmap_phys_bare_map(&mapped, mm_memmap_phys_addr(buf),
 				BUF_SIZE, BASE_FLAGS);
 
 	printk("Mapped (2nd time): %p\n", mapped);
@@ -509,7 +509,7 @@ ZTEST(mem_map_api, test_k_mem_map_user)
 	 */
 	expect_fault = false;
 
-	mm_memmap_phys_bare_map(&mapped, z_mem_phys_addr(test_page), sizeof(test_page),
+	mm_memmap_phys_bare_map(&mapped, mm_memmap_phys_addr(test_page), sizeof(test_page),
 				BASE_FLAGS | K_MEM_PERM_RW | K_MEM_PERM_USER);
 
 	printk("mapped a page: %p - %p (with K_MEM_PERM_USER)\n", mapped,
@@ -530,7 +530,7 @@ ZTEST(mem_map_api, test_k_mem_map_user)
 	 */
 	expect_fault = true;
 
-	mm_memmap_phys_bare_map(&mapped, z_mem_phys_addr(test_page), sizeof(test_page),
+	mm_memmap_phys_bare_map(&mapped, mm_memmap_phys_addr(test_page), sizeof(test_page),
 				BASE_FLAGS | K_MEM_PERM_RW);
 
 	printk("mapped a page: %p - %p (without K_MEM_PERM_USER)\n", mapped,

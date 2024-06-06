@@ -68,7 +68,7 @@
 	#define MMU_PAGE_ALIGN_PERM
 #endif
 
-epoint = Z_MEM_PHYS_ADDR(CONFIG_KERNEL_ENTRY);
+epoint = MM_MEMMAP_PHYS_ADDR(CONFIG_KERNEL_ENTRY);
 ENTRY(epoint)
 
 /* SECTIONS definitions */
