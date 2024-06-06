@@ -42,7 +42,11 @@ int main(void)
 	const struct mbox_dt_spec tx_channel = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), tx);
 
 	while (1) {
+#if defined(CONFIG_MULTITHREADING)
 		k_sleep(K_MSEC(2000));
+#else
+		k_busy_wait(2000000);
+#endif
 
 		printk("Ping (on channel %d)\n", tx_channel.channel_id);
 
