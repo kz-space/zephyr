@@ -60,6 +60,11 @@ struct stream {
 };
 #endif
 
+struct dma_cb_arg {
+	const struct device *spi_dev;
+	struct spi_stm32_data *dma_channel_data;
+};
+
 struct spi_stm32_data {
 	struct spi_context ctx;
 #ifdef CONFIG_SPI_STM32_DMA
