@@ -238,3 +238,31 @@ config BT_SILABS_HCI_BUFFER_MEMORY
 	help
 	  Select the size of allocated memory buffer for the Silicon Labs
 	  Bluetooth Library.
+
+config BT_H4_NXP_CTLR
+	bool "NXP Bluetooth Controller"
+	select GPIO
+	depends on BT_H4
+	select CRC
+	help
+	  Enables support for NXP Bluetooth Controller.
+	  More inforamtion about NXP Bluetooth profuct could be found on
+	  https://www.nxp.com/products/wireless-connectivity/wi-fi-plus-bluetooth-plus-802-15-4:WIFI-BLUETOOTH
+
+if BT_H4_NXP_CTLR
+
+config BT_H4_NXP_CTLR_WAIT_HDR_SIG_TIMEOUT
+	int "Timeout for waiting HDR Signure"
+	range 1000 60000
+	default 2500
+	help
+	  Timeout for waiting HDR Signure. Unit is millisecond.
+
+config BT_H4_NXP_CTLR_WAIT_TIME_AFTER_UPLOAD
+	int "Waiting time after firmware is uploaded"
+	range 1000 5000
+	default 1000
+	help
+	  Waiting time after firmware is uploaded. Unit is millisecond.
+
+endif #BT_H4_NXP_CTLR
