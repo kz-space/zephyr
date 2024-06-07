@@ -43,7 +43,7 @@
 			status = "okay";
 		};
 
-		pinctrl: pin-contrller@40400800 {
+		pinctrl: pin-controller@40400800 {
 			compatible = "renesas,ra8-pinctrl";
 			reg = <0x40400800 0x3c0>;
 			status = "disabled";
