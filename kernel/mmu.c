@@ -179,7 +179,7 @@ void z_page_frames_dump(void)
  * +--------------+
  * | Mapping      |
  * +--------------+ <- mappings start here
- * | Reserved     | <- special purpose virtual page(s) of size Z_VM_RESERVED
+ * | Reserved     | <- special purpose virtual page(s) of size MM_VM_RESERVED
  * +--------------+ <- MM_VIRT_RAM_END
  */
 
@@ -196,7 +196,7 @@ SYS_BITARRAY_DEFINE_STATIC(virt_region_bitmap,
 static bool virt_region_inited;
 
 #define Z_VIRT_REGION_START_ADDR	MM_VM_FREE_START
-#define Z_VIRT_REGION_END_ADDR		(MM_VIRT_RAM_END - Z_VM_RESERVED)
+#define Z_VIRT_REGION_END_ADDR		(MM_VIRT_RAM_END - MM_VM_RESERVED)
 
 static inline uintptr_t virt_from_bitmap_offset(size_t offset, size_t size)
 {
@@ -219,9 +219,9 @@ static void virt_region_init(void)
 	 * already allocated so they will never be used.
 	 */
 
-	if (Z_VM_RESERVED > 0) {
+	if (MM_VM_RESERVED > 0) {
 		/* Mark reserved region at end of virtual address space */
-		num_bits = Z_VM_RESERVED / CONFIG_MMU_PAGE_SIZE;
+		num_bits = MM_VM_RESERVED / CONFIG_MMU_PAGE_SIZE;
 		(void)sys_bitarray_set_region(&virt_region_bitmap,
 					      num_bits, 0);
 	}
