@@ -25,10 +25,17 @@
  * anonymous mappings. We don't currently maintain an ontology of these in the
  * core kernel.
  */
-#define Z_PHYS_RAM_START	((uintptr_t)CONFIG_SRAM_BASE_ADDRESS)
-#define Z_PHYS_RAM_SIZE		(KB(CONFIG_SRAM_SIZE))
-#define Z_PHYS_RAM_END		(Z_PHYS_RAM_START + Z_PHYS_RAM_SIZE)
-#define Z_NUM_PAGE_FRAMES	(Z_PHYS_RAM_SIZE / (size_t)CONFIG_MMU_PAGE_SIZE)
+
+/** Start address of physical memory. */
+#define MM_PHYS_RAM_START	((uintptr_t)CONFIG_SRAM_BASE_ADDRESS)
+
+/** Size of physical memory. */
+#define MM_PHYS_RAM_SIZE	(KB(CONFIG_SRAM_SIZE))
+
+/** End address (exclusive) of physical memory. */
+#define MM_PHYS_RAM_END		(MM_PHYS_RAM_START + MM_PHYS_RAM_SIZE)
+
+#define Z_NUM_PAGE_FRAMES	(MM_PHYS_RAM_SIZE / (size_t)CONFIG_MMU_PAGE_SIZE)
 
 /** End virtual address of virtual address space */
 #define Z_VIRT_RAM_START	((uint8_t *)CONFIG_KERNEL_VM_BASE)
@@ -78,7 +85,7 @@
 	((uint8_t *)(((uintptr_t)(phys)) + MM_MEMMAP_VM_OFFSET))
 
 #ifdef CONFIG_ARCH_MAPS_ALL_RAM
-#define Z_FREE_VM_START	MM_MEMMAP_BOOT_PHYS_TO_VIRT(Z_PHYS_RAM_END)
+#define Z_FREE_VM_START	MM_MEMMAP_BOOT_PHYS_TO_VIRT(MM_PHYS_RAM_END)
 #else
 #define Z_FREE_VM_START	Z_KERNEL_VIRT_END
 #endif /* CONFIG_ARCH_MAPS_ALL_RAM */
@@ -229,7 +236,7 @@ extern struct z_page_frame z_page_frames[Z_NUM_PAGE_FRAMES];
 static inline uintptr_t z_page_frame_to_phys(struct z_page_frame *pf)
 {
 	return (uintptr_t)((pf - z_page_frames) * CONFIG_MMU_PAGE_SIZE) +
-			Z_PHYS_RAM_START;
+			MM_PHYS_RAM_START;
 }
 
 /* Presumes there is but one mapping in the virtual address space */
@@ -243,8 +250,8 @@ static inline void *z_page_frame_to_virt(struct z_page_frame *pf)
 static inline bool z_is_page_frame(uintptr_t phys)
 {
 	z_assert_phys_aligned(phys);
-	return IN_RANGE(phys, (uintptr_t)Z_PHYS_RAM_START,
-			(uintptr_t)(Z_PHYS_RAM_END - 1));
+	return IN_RANGE(phys, (uintptr_t)MM_PHYS_RAM_START,
+			(uintptr_t)(MM_PHYS_RAM_END - 1));
 }
 
 static inline struct z_page_frame *z_phys_to_page_frame(uintptr_t phys)
@@ -252,7 +259,7 @@ static inline struct z_page_frame *z_phys_to_page_frame(uintptr_t phys)
 	__ASSERT(z_is_page_frame(phys),
 		 "0x%lx not an SRAM physical address", phys);
 
-	return &z_page_frames[(phys - Z_PHYS_RAM_START) /
+	return &z_page_frames[(phys - MM_PHYS_RAM_START) /
 			      CONFIG_MMU_PAGE_SIZE];
 }
 
@@ -280,8 +287,8 @@ void z_page_frames_dump(void);
 
 /* Convenience macro for iterating over all page frames */
 #define Z_PAGE_FRAME_FOREACH(_phys, _pageframe) \
-	for ((_phys) = Z_PHYS_RAM_START, (_pageframe) = z_page_frames; \
-	     (_phys) < Z_PHYS_RAM_END; \
+	for ((_phys) = MM_PHYS_RAM_START, (_pageframe) = z_page_frames; \
+	     (_phys) < MM_PHYS_RAM_END; \
 	     (_phys) += CONFIG_MMU_PAGE_SIZE, (_pageframe)++)
 
 #ifdef CONFIG_DEMAND_PAGING
