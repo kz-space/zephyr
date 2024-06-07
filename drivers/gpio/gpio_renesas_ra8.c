@@ -21,12 +21,6 @@ static const gpio_pin_t vbatt_pins[] = {
 	4U,
 };
 
-#define RA8_INVALID_PORT_ADDR 0UL
-
-#define RA8_GPIO_PORT_ADDR(nodelabel) \
-	COND_CODE_1(DT_NODE_EXISTS(DT_NODELABEL(nodelabel)), \
-	(DT_REG_ADDR(DT_NODELABEL(nodelabel))), (RA8_INVALID_PORT_ADDR))
-
 struct gpio_ra8_config {
 	struct gpio_driver_config common;
 	uint8_t port_num;
