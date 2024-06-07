@@ -12,7 +12,6 @@
 #include <zephyr/irq.h>
 #include <soc.h>
 
-#define PRCR_KEY   0xA500U
 #define VBATT_PORT 4
 
 static const gpio_pin_t vbatt_pins[] = {
@@ -52,11 +51,11 @@ static int gpio_ra8_pin_configure(const struct device *dev, gpio_pin_t pin, gpio
 			}
 		}
 
-		R_SYSTEM->PRCR = ((R_SYSTEM->PRCR | PRCR_KEY) | R_SYSTEM_PRCR_PRC1_Msk);
+		R_BSP_RegisterProtectDisable(BSP_REG_PROTECT_OM_LPC_BATT);
 
 		R_SYSTEM->VBTICTLR &= (uint8_t)~clear;
 
-		R_SYSTEM->PRCR = ((R_SYSTEM->PRCR | PRCR_KEY) & (uint16_t)~R_SYSTEM_PRCR_PRC1_Msk);
+		R_BSP_RegisterProtectEnable(BSP_REG_PROTECT_OM_LPC_BATT);
 	}
 
 	R_PMISC->PWPRS = 0;
