@@ -16,7 +16,7 @@
 #include "r_transfer_api.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(ra8_uart_sci);
+LOG_MODULE_REGISTER(ra8_uart_sci_b);
 
 #if defined(CONFIG_UART_ASYNC_API)
 void sci_b_uart_rxi_isr(void);
