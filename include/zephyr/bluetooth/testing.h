@@ -52,6 +52,8 @@ struct bt_test_cb {
 
 /** Register callbacks for Bluetooth testing purposes
  *
+ *  @note Registering the same callback struct twice is not supported.
+ *
  *  @param cb bt_test_cb callback structure
  */
 void bt_test_cb_register(struct bt_test_cb *cb);
