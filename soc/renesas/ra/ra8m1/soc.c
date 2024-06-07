@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief System/hardware module for Renesas RA8 family processor
+ * @brief System/hardware module for Renesas RA8M1 family processor
  */
 
 #include <zephyr/device.h>
@@ -38,7 +38,7 @@ uint32_t SystemCoreClock BSP_SECTION_EARLY_INIT;
  *
  * @return 0
  */
-static int renesas_ra8_init(void)
+static int renesas_ra8m1_init(void)
 {
 	uint32_t key;
 
@@ -53,4 +53,4 @@ static int renesas_ra8_init(void)
 	return 0;
 }
 
-SYS_INIT(renesas_ra8_init, PRE_KERNEL_1, 0);
+SYS_INIT(renesas_ra8m1_init, PRE_KERNEL_1, 0);
