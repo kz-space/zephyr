@@ -166,24 +166,24 @@ static int gpio_ra8_init(const struct device *dev)
 	return 0;
 }
 
-#define GPIO_DEVICE_INIT(__node, __port_num, __suffix, __addr)                                     \
-	static const struct gpio_ra8_config gpio_ra8_config_##__suffix = {                         \
+#define GPIO_DEVICE_INIT(node, port_number, suffix, addr)                                     \
+	static const struct gpio_ra8_config gpio_ra8_config_##suffix = {                         \
 		.common =                                                                          \
 			{                                                                          \
 				.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_NGPIOS(16U),              \
 			},                                                                         \
-		.port_num = __port_num,                                                            \
-		.port = (R_PORT0_Type *)__addr,                                                    \
+		.port_num = port_number,                                                           \
+		.port = (R_PORT0_Type *)addr,                                                    \
 	};                                                                                         \
-	static struct gpio_ra8_data gpio_ra8_data_##__suffix;                                      \
-	DEVICE_DT_DEFINE(__node, gpio_ra8_init, PM_DEVICE_DT_GET(__node),                          \
-			 &gpio_ra8_data_##__suffix, &gpio_ra8_config_##__suffix, PRE_KERNEL_1,     \
+	static struct gpio_ra8_data gpio_ra8_data_##suffix;                                      \
+	DEVICE_DT_DEFINE(node, gpio_ra8_init, PM_DEVICE_DT_GET(node),                          \
+			 &gpio_ra8_data_##suffix, &gpio_ra8_config_##suffix, PRE_KERNEL_1,     \
 			 CONFIG_GPIO_INIT_PRIORITY, &gpio_ra8_drv_api_funcs)
 
-#define GPIO_DEVICE_INIT_RA8(__suffix)                                                             \
-	GPIO_DEVICE_INIT(DT_NODELABEL(ioport##__suffix),                                           \
-			 DT_PROP(DT_NODELABEL(ioport##__suffix), port), __suffix,                  \
-			 DT_REG_ADDR(DT_NODELABEL(ioport##__suffix)))
+#define GPIO_DEVICE_INIT_RA8(suffix)                                                             \
+	GPIO_DEVICE_INIT(DT_NODELABEL(ioport##suffix),                                             \
+			 DT_PROP(DT_NODELABEL(ioport##suffix), port), suffix,                    \
+			 DT_REG_ADDR(DT_NODELABEL(ioport##suffix)))
 
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport0), okay)
 GPIO_DEVICE_INIT_RA8(0);
