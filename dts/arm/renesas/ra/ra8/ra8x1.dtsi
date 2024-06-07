@@ -49,7 +49,7 @@
 			status = "disabled";
 		};
 
-		gpio0: gpio@40400000 {
+		ioport0: gpio@40400000 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400000 0x20>;
 			port = <0>;
@@ -59,7 +59,7 @@
 			status = "disabled";
 		};
 
-		gpio1: gpio@40400020 {
+		ioport1: gpio@40400020 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400020 0x20>;
 			port = <1>;
@@ -69,7 +69,7 @@
 			status = "disabled";
 		};
 
-		gpio2: gpio@40400040 {
+		ioport2: gpio@40400040 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400040 0x20>;
 			port = <2>;
@@ -79,7 +79,7 @@
 			status = "disabled";
 		};
 
-		gpio3: gpio@40400060 {
+		ioport3: gpio@40400060 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400060 0x20>;
 			port = <3>;
@@ -89,7 +89,7 @@
 			status = "disabled";
 		};
 
-		gpio4: gpio@40400080 {
+		ioport4: gpio@40400080 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400080 0x20>;
 			port = <4>;
@@ -99,7 +99,7 @@
 			status = "disabled";
 		};
 
-		gpio5: gpio@404000a0 {
+		ioport5: gpio@404000a0 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x404000a0 0x20>;
 			port = <5>;
@@ -109,7 +109,7 @@
 			status = "disabled";
 		};
 
-		gpio6: gpio@404000c0 {
+		ioport6: gpio@404000c0 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x404000c0 0x20>;
 			port = <6>;
@@ -119,7 +119,7 @@
 			status = "disabled";
 		};
 
-		gpio7: gpio@404000e0 {
+		ioport7: gpio@404000e0 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x404000e0 0x20>;
 			port = <7>;
@@ -129,7 +129,7 @@
 			status = "disabled";
 		};
 
-		gpio8: gpio@40400100 {
+		ioport8: gpio@40400100 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400100 0x20>;
 			port = <8>;
@@ -139,7 +139,7 @@
 			status = "disabled";
 		};
 
-		gpio9: gpio@40400120 {
+		ioport9: gpio@40400120 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400120 0x20>;
 			port = <9>;
@@ -149,7 +149,7 @@
 			status = "disabled";
 		};
 
-		gpioa: gpio@40400140 {
+		ioporta: gpio@40400140 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400140 0x20>;
 			port = <10>;
@@ -159,7 +159,7 @@
 			status = "disabled";
 		};
 
-		gpiob: gpio@40400160 {
+		ioportb: gpio@40400160 {
 			compatible = "renesas,ra8-gpio";
 			reg = <0x40400160 0x20>;
 			port = <11>;

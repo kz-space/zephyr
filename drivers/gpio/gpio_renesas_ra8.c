@@ -181,54 +181,54 @@ static int gpio_ra8_init(const struct device *dev)
 			 CONFIG_GPIO_INIT_PRIORITY, &gpio_ra8_drv_api_funcs)
 
 #define GPIO_DEVICE_INIT_RA8(__suffix)                                                             \
-	GPIO_DEVICE_INIT(DT_NODELABEL(gpio##__suffix),                                             \
-			 DT_PROP(DT_NODELABEL(gpio##__suffix), port), __suffix,                    \
-			 DT_REG_ADDR(DT_NODELABEL(gpio##__suffix)))
+	GPIO_DEVICE_INIT(DT_NODELABEL(ioport##__suffix),                                           \
+			 DT_PROP(DT_NODELABEL(ioport##__suffix), port), __suffix,                  \
+			 DT_REG_ADDR(DT_NODELABEL(ioport##__suffix)))
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio0), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport0), okay)
 GPIO_DEVICE_INIT_RA8(0);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio0), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport0), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio1), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport1), okay)
 GPIO_DEVICE_INIT_RA8(1);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio1), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport1), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio2), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport2), okay)
 GPIO_DEVICE_INIT_RA8(2);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio2), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport2), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio3), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport3), okay)
 GPIO_DEVICE_INIT_RA8(3);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio3), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport3), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio4), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport4), okay)
 GPIO_DEVICE_INIT_RA8(4);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio4), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport4), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio5), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport5), okay)
 GPIO_DEVICE_INIT_RA8(5);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio5), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport5), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio6), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport6), okay)
 GPIO_DEVICE_INIT_RA8(6);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio6), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport6), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio7), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport7), okay)
 GPIO_DEVICE_INIT_RA8(7);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio7), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport7), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio8), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport8), okay)
 GPIO_DEVICE_INIT_RA8(8);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio8), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport8), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpio9), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioport9), okay)
 GPIO_DEVICE_INIT_RA8(9);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpio9), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioport9), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioa), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioporta), okay)
 GPIO_DEVICE_INIT_RA8(a);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpioa), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioporta), okay) */
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiob), okay)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(ioportb), okay)
 GPIO_DEVICE_INIT_RA8(b);
-#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpiob), okay) */
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(ioportb), okay) */
