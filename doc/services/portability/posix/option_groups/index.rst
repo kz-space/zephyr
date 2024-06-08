@@ -909,18 +909,22 @@ _POSIX_TIMEOUTS
 _XOPEN_STREAMS
 ++++++++++++++
 
+With the exception of ``ioctl()``, functions in the ``_XOPEN_STREAMS`` option group are not
+supported in Zephyr at this time. Unsupported functions in this option group will fail with
+``ENOSYS`` :ref:`†<posix_undefined_behaviour>`.
+
 .. csv-table:: _XOPEN_STREAMS
    :header: API, Supported
    :widths: 50,10
 
-    fattach(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    fdetach(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    getmsg(),  yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    getpmsg(),  yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    ioctl(),yes
-    isastream(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    putmsg(), yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    putpmsg(),
+    fattach(), yes
+    fdetach(), yes
+    getmsg(), yes
+    getpmsg(), yes
+    ioctl(), yes
+    isastream(), yes
+    putmsg(), yes
+    putpmsg(), yes
 
 .. _Subprofiling Considerations:
     https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_subprofiles.html
