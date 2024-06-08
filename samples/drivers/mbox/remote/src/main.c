@@ -46,6 +46,12 @@ int main(void)
 	const struct mbox_dt_spec tx_channel = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), tx);
 
 	while (1) {
+#if defined(CONFIG_MULTITHREADING)
+		k_sleep(K_MSEC(3000));
+#else
+		k_busy_wait(3000000);
+#endif
+
 		printk("Ping (on channel %d)\n", tx_channel.channel_id);
 
 		ret = mbox_send_dt(&tx_channel, NULL);
@@ -53,10 +59,7 @@ int main(void)
 			printk("Could not send (%d)\n", ret);
 			return 0;
 		}
-
-		k_sleep(K_MSEC(3000));
 	}
 #endif /* CONFIG_TX_ENABLED */
-
 	return 0;
 }

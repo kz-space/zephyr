@@ -34,15 +34,15 @@ wdt011: &cpuapp_wdt011 {};
 };
 
 &cpusec_bellboard {
-	compatible = "nordic,nrf-bellboard-remote";
+	compatible = "nordic,nrf-bellboard-tx";
 };
 
 &cpuapp_bellboard {
-	compatible = "nordic,nrf-bellboard-local";
+	compatible = "nordic,nrf-bellboard-rx";
 };
 
 &cpurad_bellboard {
-	compatible = "nordic,nrf-bellboard-remote";
+	compatible = "nordic,nrf-bellboard-tx";
 };
 
 &gpiote130 {
