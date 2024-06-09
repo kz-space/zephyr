@@ -107,6 +107,12 @@ tests:
       - nucleo_f767zi
       - nucleo_h743zi
       - nucleo_h753zi
+  drivers.spi.stm32_spi_async_dma.loopback:
+    extra_args: OVERLAY_CONFIG="overlay-stm32-spi-async-dma.conf"
+    filter: CONFIG_SOC_FAMILY_STM32
+    platform_allow:
+      - nucleo_f429zi
+      - nucleo_f767zi
   drivers.spi.gd32_spi_interrupt.loopback:
     extra_args: OVERLAY_CONFIG="overlay-gd32-spi-interrupt.conf"
     platform_allow:
