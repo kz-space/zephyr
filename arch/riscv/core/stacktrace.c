@@ -49,7 +49,7 @@ static bool in_stack_bound(uintptr_t addr, const struct arch_esf *esf)
 		start = (uintptr_t)K_KERNEL_STACK_BUFFER(z_interrupt_stacks[cpu_id]);
 		end = start + CONFIG_ISR_STACK_SIZE;
 #ifdef CONFIG_USERSPACE
-	} else if (((esf->mstatus & MSTATUS_MPP) == PRV_U) &&
+	} else if ((esf != NULL) && ((esf->mstatus & MSTATUS_MPP) == PRV_U) &&
 		   ((_current->base.user_options & K_USER) != 0)) {
 		/* See: zephyr/include/zephyr/arch/riscv/arch.h */
 		if (IS_ENABLED(CONFIG_PMP_POWER_OF_TWO_ALIGNMENT)) {
@@ -79,11 +79,21 @@ static void walk_stackframe(bool (*vrfy_bound)(uintptr_t, const struct arch_esf 
 			    const _callee_saved_t *csf, const struct arch_esf *esf,
 			    bool (*fn)(void *, unsigned long), void *arg)
 {
-	ARG_UNUSED(csf);
-	/* make sure last_fp is smaller than fp for the first run */
-	uintptr_t fp = esf->s0, last_fp = fp - 1;
-	uintptr_t ra = esf->mepc;
+	uintptr_t fp, last_fp;
+	uintptr_t ra;
 	struct stackframe *frame;
+
+	if (esf != NULL) {
+		fp = esf->s0;
+		ra = esf->mepc;
+	} else if ((csf == NULL) || csf == &_current->callee_saved) {
+		esf = *((struct arch_esf **)(((uintptr_t)_current_cpu->irq_stack) - 16));
+		fp = esf->s0;
+		ra = (uintptr_t)walk_stackframe;
+	} else {
+		return;
+	}
+	last_fp = 0;
 
 	for (int i = 0;
 	     (i < MAX_STACK_FRAMES) && (fp != 0U) && vrfy_bound(fp, esf) && (fp > last_fp);) {
@@ -108,10 +118,22 @@ static void walk_stackframe(bool (*vrfy_bound)(uintptr_t, const struct arch_esf 
 			    const _callee_saved_t *csf, const struct arch_esf *esf,
 			    bool (*fn)(void *, unsigned long), void *arg)
 {
-	ARG_UNUSED(csf);
-	uintptr_t sp = z_riscv_get_sp_before_exc(esf);
-	uintptr_t ra = esf->mepc;
-	uintptr_t *ksp = (uintptr_t *)sp, last_ksp = (uintptr_t)ksp - 1;
+	uintptr_t sp;
+	uintptr_t ra;
+	uintptr_t *ksp, last_ksp;
+
+	if (esf != NULL) {
+		sp = z_riscv_get_sp_before_exc(esf);
+		ksp = (uintptr_t *)sp;
+		ra = esf->mepc;
+	} else if ((csf == NULL) || csf == &k_current_get()->callee_saved) {
+		sp = k_current_get()->callee_saved.sp;
+		ksp = (uintptr_t *)sp;
+		ra = (uintptr_t)walk_stackframe;
+	} else {
+		return;
+	}
+	last_ksp = 0;
 
 	for (int i = 0; (i < MAX_STACK_FRAMES) && ((uintptr_t)ksp != 0U) &&
 			vrfy_bound((uintptr_t)ksp, esf) && ((uintptr_t)ksp > last_ksp);
@@ -165,11 +187,11 @@ static bool print_trace_address(void *arg, unsigned long ra)
 	return true;
 }
 
-void z_riscv_unwind_stack(const struct arch_esf *esf)
+void z_riscv_unwind_stack(const struct arch_esf *esf, const _callee_saved_t *csf)
 {
 	int i = 0;
 
 	LOG_ERR("call trace:");
-	walk_stackframe(in_stack_bound, NULL, esf, print_trace_address, &i);
+	walk_stackframe(in_stack_bound, csf, esf, print_trace_address, &i);
 	LOG_ERR("");
 }
