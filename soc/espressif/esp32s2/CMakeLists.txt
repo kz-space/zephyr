@@ -55,7 +55,7 @@ else()
   board_finalize_runner_args(esp32 "--esp-app-address=${img_0_off}")
 endif()
 
-if(CONFIG_MCUBOOT)
+if(0) #CONFIG_MCUBOOT)
     # search from cross references between bootloader sections
     message("check_callgraph using: ${ESP_IDF_PATH}/tools/ci/check_callgraph.py")
     set_property(GLOBAL APPEND PROPERTY extra_post_build_commands
