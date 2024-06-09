@@ -892,7 +892,6 @@ void bt_cap_initiator_codec_configured(struct bt_cap_stream *cap_stream)
 	}
 
 	LOG_DBG("cap_stream %p", cap_stream);
-
 	if (bt_cap_common_subproc_is_type(BT_CAP_COMMON_SUBPROC_TYPE_RELEASE)) {
 		/* When releasing a stream, it may go into the codec configured state if
 		 * the unicast server caches the configuration - We treat it as a release
@@ -950,7 +949,6 @@ void bt_cap_initiator_codec_configured(struct bt_cap_stream *cap_stream)
 
 		return;
 	}
-
 	/* The QoS Configure procedure works on a set of connections and a
 	 * unicast group, so we generate a list of unique connection pointers
 	 * for the procedure
@@ -978,7 +976,8 @@ void bt_cap_initiator_codec_configured(struct bt_cap_stream *cap_stream)
 		if (free_conn != NULL) {
 			*free_conn = stream_conn;
 		} else {
-			__ASSERT_PRINT("No free conns");
+			__ASSERT(false, "[%zu]: No free conns", i);
+			return;
 		}
 	}
 
