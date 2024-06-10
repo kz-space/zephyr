@@ -47,7 +47,7 @@ of these fields or might place limits on the maximum values of fields):
 +---------------+----------------------------------------+
 | PATCHLEVEL    | Numerical                              |
 +---------------+----------------------------------------+
-| VERSION_TWEAK | Numerical                              |
+| VERSION_TWEAK | Numerical (or "git" string)            |
 +---------------+----------------------------------------+
 | EXTRAVERSION  | Alphanumerical (Lowercase a-z and 0-9) |
 +---------------+----------------------------------------+
@@ -187,6 +187,26 @@ The following variable are available for usage in CMake files:
 |                             |                 | ``PATCHLEVEL``, |br|                              |                  |
 |                             |                 | ``VERSION_TWEAK``                                 |                  |
 +-----------------------------+-----------------+---------------------------------------------------+------------------+
+
+If ``VERSION_TWEAK = git``, then CMake will automatically determine the git commit hash of the
+application directory and set ``VERSION_TWEAK`` such that it matches the first 8 characters of the
+commit hash. For example:
+
+.. code-block::
+
+   # Current git commit hash
+   > git rev-parse HEAD
+   645e23bf9095825afbb38423cc60df9e87382ef0
+
+   # Generated version file
+   > cat app_version.h
+   ...
+   #define APP_TWEAK                    1683891135
+   ...
+
+   # APP_TWEAK is equivalent to hash
+   > printf "%08x" 1683891135
+   645e23bf
 
 Use in MCUboot-supported applications
 =====================================
