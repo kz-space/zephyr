@@ -1049,3 +1049,10 @@ test_i2c_ina226: ina226@8d {
 	current-lsb-microamps = <5000>;
 	rshunt-micro-ohms = <500>;
 };
+
+test_i2c_bmp180: bmp180@8e {
+	compatible = "bosch,bmp180";
+	status = "okay";
+	reg = <0x8e>;
+	oversampling = <1>;
+};
