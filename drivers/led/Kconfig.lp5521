@@ -1,0 +1,12 @@
+# Copyright (c) 2024 Croxel, Inc.
+# SPDX-License-Identifier: Apache-2.0
+config LP5521
+	bool "LP5521 LED driver"
+	default y
+	depends on DT_HAS_TI_LP5521_ENABLED
+	select I2C
+	help
+	  Enable LED driver for LP5521.
+
+	  LP5521 LED driver has 3 channels (RGB). Each channel can drive up to
+	  25.5 mA per LED.
