@@ -1014,7 +1014,7 @@ void mchp_xec_clk_ctrl_sys_sleep_disable(void)
 #endif
 
 /* Clock controller driver registration */
-static struct clock_control_driver_api xec_clock_control_api = {
+static const struct clock_control_driver_api xec_clock_control_api = {
 	.on = xec_clock_control_on,
 	.off = xec_clock_control_off,
 	.get_rate = xec_clock_control_get_subsys_rate,
@@ -1090,7 +1090,7 @@ const struct xec_pcr_config pcr_xec_config = {
 };
 
 DEVICE_DT_INST_DEFINE(0,
-		    &xec_clock_control_init,
+		    xec_clock_control_init,
 		    NULL,
 		    NULL, &pcr_xec_config,
 		    PRE_KERNEL_1,

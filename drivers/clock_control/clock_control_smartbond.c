@@ -582,7 +582,7 @@ int smartbond_clocks_init(const struct device *dev)
 	return 0;
 }
 
-static struct clock_control_driver_api smartbond_clock_control_api = {
+static const struct clock_control_driver_api smartbond_clock_control_api = {
 	.on = smartbond_clock_control_on,
 	.off = smartbond_clock_control_off,
 	.get_rate = smartbond_clock_control_get_rate,
@@ -616,7 +616,7 @@ static int smartbond_clocks_pm_action(const struct device *dev, enum pm_device_a
 PM_DEVICE_DT_DEFINE(DT_NODELABEL(osc), smartbond_clocks_pm_action);
 
 DEVICE_DT_DEFINE(DT_NODELABEL(osc),
-		 &smartbond_clocks_init,
+		 smartbond_clocks_init,
 		 PM_DEVICE_DT_GET(DT_NODELABEL(osc)),
 		 NULL, NULL,
 		 PRE_KERNEL_1,
