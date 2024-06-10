@@ -4,6 +4,10 @@ zephyr_library()
 
 zephyr_library_sources(bt_crypto.c)
 
+if(CONFIG_BT_USE_PSA_API)
+    zephyr_link_libraries(mbedTLS)
+endif()
+
 if(CONFIG_BT_CRYPTO_LOG_LEVEL_DBG)
     message(WARNING "CONFIG_BT_CRYPTO_LOG_LEVEL_DBG is enabled.
     Private security keys such as the Long Term Key will be printed out.

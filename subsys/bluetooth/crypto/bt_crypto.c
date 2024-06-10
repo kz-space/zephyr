@@ -7,8 +7,12 @@
 
 #include <zephyr/sys/byteorder.h>
 
+#if defined(CONFIG_BT_USE_PSA_API)
+#include "psa/crypto.h"
+#else
 #include <tinycrypt/cmac_mode.h>
 #include <tinycrypt/constants.h>
+#endif
 
 #include "common/bt_str.h"
 #include "bt_crypto.h"
@@ -17,7 +21,33 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(bt_crypto);
 
+#if defined(CONFIG_BT_USE_PSA_API)
+int bt_crypto_aes_cmac(const uint8_t *key, const uint8_t *in, size_t len, uint8_t *out)
+{
+	psa_key_id_t key_id;
+	psa_key_attributes_t key_attr = PSA_KEY_ATTRIBUTES_INIT;
+	size_t out_size;
+	psa_status_t status, destroy_status;
 
+	psa_set_key_type(&key_attr, PSA_KEY_TYPE_AES);
+	psa_set_key_usage_flags(&key_attr, PSA_KEY_USAGE_SIGN_MESSAGE |
+					   PSA_KEY_USAGE_VERIFY_MESSAGE);
+	psa_set_key_algorithm(&key_attr, PSA_ALG_CMAC);
+
+	status = psa_import_key(&key_attr, key, 16, &key_id);
+	if (status != PSA_SUCCESS) {
+		return -EIO;
+	}
+
+	status = psa_mac_compute(key_id, PSA_ALG_CMAC, in, len, out, 16, &out_size);
+	destroy_status = psa_destroy_key(key_id);
+	if ((status != PSA_SUCCESS) || (destroy_status != PSA_SUCCESS)) {
+		return -EIO;
+	}
+
+	return 0;
+}
+#else
 int bt_crypto_aes_cmac(const uint8_t *key, const uint8_t *in, size_t len, uint8_t *out)
 {
 	struct tc_aes_key_sched_struct sched;
@@ -37,6 +67,7 @@ int bt_crypto_aes_cmac(const uint8_t *key, const uint8_t *in, size_t len, uint8_
 
 	return 0;
 }
+#endif
 
 int bt_crypto_f4(const uint8_t *u, const uint8_t *v, const uint8_t *x, uint8_t z, uint8_t res[16])
 {
