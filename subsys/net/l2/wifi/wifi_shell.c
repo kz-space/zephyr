@@ -1933,6 +1933,363 @@ static int cmd_wifi_version(const struct shell *sh, size_t argc, char *argv[])
 	return 0;
 }
 
+static int parse_dpp_args_curve(char *str)
+{
+	if (!strcmp(str, "P-256")) {
+		return WIFI_DPP_CURVES_P_256;
+	} else if (!strcmp(str, "P-384")) {
+		return WIFI_DPP_CURVES_P_384;
+	} else if (!strcmp(str, "P-521")) {
+		return WIFI_DPP_CURVES_P_512;
+	} else if (!strcmp(str, "BP-256")) {
+		return WIFI_DPP_CURVES_BP_256;
+	} else if (!strcmp(str, "BP-384")) {
+		return WIFI_DPP_CURVES_BP_384;
+	} else if (!strcmp(str, "BP-512")) {
+		return WIFI_DPP_CURVES_BP_512;
+	}
+
+	return WIFI_DPP_CURVES_P_256;
+}
+
+static int parse_dpp_args_conf(char *str)
+{
+	if (!strncmp(str, "sta-", 4)) {
+		return WIFI_DPP_CONF_STA;
+	} else if (!strncmp(str, "ap-", 3)) {
+		return WIFI_DPP_CONF_AP;
+	} else if (!strcmp(str, "query")) {
+		return WIFI_DPP_CONF_QUERY;
+	}
+
+	return WIFI_DPP_CONF_UNSET;
+}
+
+static int parse_dpp_args_role(char *str)
+{
+	if (!strcmp(str, "configurator")) {
+		return WIFI_DPP_ROLE_CONFIGURATOR;
+	} else if (!strcmp(str, "enrollee")) {
+		return WIFI_DPP_ROLE_ENROLLEE;
+	} else if (!strcmp(str, "either")) {
+		return WIFI_DPP_ROLE_EITHER;
+	}
+
+	return WIFI_DPP_ROLE_UNSET;
+}
+
+static int parse_dpp_args_configurator_add(const struct shell *sh, size_t argc, char *argv[],
+					   struct wifi_dpp_params *params)
+{
+	char *pos;
+
+	for (int i = 2; i < argc; i++) {
+		pos = strstr(argv[i], "curve=");
+		if (pos) {
+			params->configurator_add.curve = parse_dpp_args_curve(
+				pos + sizeof("curve=") - 1);
+			continue;
+		}
+
+		pos = strstr(argv[i], "net_access_key_curve=");
+		if (pos) {
+			params->configurator_add.net_access_key_curve = parse_dpp_args_curve(
+				pos + sizeof("net_access_key_curve=") - 1);
+			continue;
+		}
+	}
+	return 0;
+}
+
+static int parse_dpp_args_auth_init(const struct shell *sh, size_t argc, char *argv[],
+				    struct wifi_dpp_params *params)
+{
+	int ret = 0;
+	char *pos;
+
+	for (int i = 2; i < argc; i++) {
+		pos = strstr(argv[i], "peer=");
+		if (pos) {
+			params->auth_init.peer = shell_strtol(
+				pos + sizeof("peer=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+			continue;
+		}
+
+		pos = strstr(argv[i], "conf=");
+		if (pos) {
+			params->auth_init.conf = parse_dpp_args_conf(
+				pos + sizeof("conf=") - 1);
+			continue;
+		}
+
+		pos = strstr(argv[i], "ssid=");
+		if (pos) {
+			strncpy(params->auth_init.ssid,
+				pos + sizeof("ssid=") - 1, WIFI_SSID_MAX_LEN);
+			continue;
+		}
+
+		pos = strstr(argv[i], "configurator=");
+		if (pos) {
+			params->auth_init.configurator = shell_strtol(
+				pos + sizeof("configurator=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+			continue;
+		}
+
+		pos = strstr(argv[i], "role=");
+		if (pos) {
+			params->auth_init.role = parse_dpp_args_role(
+				pos + sizeof("role=") - 1);
+			continue;
+		}
+	}
+end:
+	return ret;
+}
+
+static int parse_dpp_args_chirp(const struct shell *sh, size_t argc, char *argv[],
+				struct wifi_dpp_params *params)
+{
+	int ret = 0;
+	char *pos;
+
+	for (int i = 2; i < argc; i++) {
+		pos = strstr(argv[i], "own=");
+		if (pos) {
+			params->chirp.id = shell_strtol(
+				pos + sizeof("own=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+			continue;
+		}
+
+		pos = strstr(argv[i], "listen=");
+		if (pos) {
+			params->chirp.freq = shell_strtol(
+				pos + sizeof("listen=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+			continue;
+		}
+	}
+end:
+	return ret;
+}
+
+static int parse_dpp_args_listen(const struct shell *sh, size_t argc, char *argv[],
+				 struct wifi_dpp_params *params)
+{
+	int ret = 0;
+	char *pos;
+
+	if (argc >= 3) {
+		params->listen.freq = shell_strtol(argv[2], 10, &ret);
+		if (ret) {
+			goto end;
+		}
+	}
+
+	if (argc >= 4) {
+		pos = strstr(argv[3], "role=");
+		if (pos) {
+			params->listen.role = parse_dpp_args_role(
+				pos + sizeof("role=") - 1);
+		}
+	}
+end:
+	return ret;
+}
+
+static int parse_dpp_args_btstrap_gen(const struct shell *sh, size_t argc, char *argv[],
+				      struct wifi_dpp_params *params)
+{
+	int ret = 0;
+	char *pos;
+
+	for (int i = 2; i < argc; i++) {
+		pos = strstr(argv[i], "type=");
+		if (pos) {
+			params->bootstrap_gen.type = WIFI_DPP_BOOTSTRAP_TYPE_QRCODE;
+			continue;
+		}
+
+		pos = strstr(argv[i], "chan=");
+		if (pos) {
+			params->bootstrap_gen.op_class = shell_strtol(
+				pos + sizeof("chan=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+
+			pos = strchr(argv[i], '/');
+			if (pos) {
+				params->bootstrap_gen.chan = shell_strtol(
+					pos + 1, 10, &ret);
+				if (ret) {
+					goto end;
+				}
+			}
+			continue;
+		}
+
+		pos = strstr(argv[i], "mac=");
+		if (pos) {
+			net_bytes_from_str(params->bootstrap_gen.mac, WIFI_MAC_ADDR_LEN,
+					   pos + sizeof("mac=") - 1);
+			continue;
+		}
+
+		pos = strstr(argv[i], "curve=");
+		if (pos) {
+			params->bootstrap_gen.curve = parse_dpp_args_curve(
+				pos + sizeof("curve=") - 1);
+			continue;
+		}
+	}
+end:
+	return ret;
+}
+
+static int parse_dpp_args_set_config_param(const struct shell *sh, size_t argc, char *argv[],
+					   struct wifi_dpp_params *params)
+{
+	int ret = 0;
+	char *pos;
+
+	for (int i = 3; i < argc; i++) {
+		pos = strstr(argv[i], "peer=");
+		if (pos) {
+			params->configurator_set.peer = shell_strtol(
+				pos + sizeof("peer=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+			continue;
+		}
+
+		pos = strstr(argv[i], "conf=");
+		if (pos) {
+			params->configurator_set.conf = parse_dpp_args_conf(
+				pos + sizeof("conf=") - 1);
+			continue;
+		}
+
+		pos = strstr(argv[i], "ssid=");
+		if (pos) {
+			strncpy(params->configurator_set.ssid,
+				pos + sizeof("ssid=") - 1, WIFI_SSID_MAX_LEN);
+			continue;
+		}
+
+		pos = strstr(argv[i], "configurator=");
+		if (pos) {
+			params->configurator_set.configurator = shell_strtol(
+				pos + sizeof("configurator=") - 1, 10, &ret);
+			if (ret) {
+				goto end;
+			}
+			continue;
+		}
+
+		pos = strstr(argv[i], "role=");
+		if (pos) {
+			params->configurator_set.role = parse_dpp_args_role(
+				pos + sizeof("role=") - 1);
+			continue;
+		}
+
+		pos = strstr(argv[i], "curve=");
+		if (pos) {
+			params->configurator_set.curve = parse_dpp_args_curve(
+				pos + sizeof("curve=") - 1);
+			continue;
+		}
+
+		pos = strstr(argv[i], "net_access_key_curve=");
+		if (pos) {
+			params->configurator_set.net_access_key_curve = parse_dpp_args_curve(
+				pos + sizeof("net_access_key_curve=") - 1);
+			continue;
+		}
+	}
+end:
+	return ret;
+}
+
+static int parse_dpp_args_to_params(const struct shell *sh, size_t argc, char *argv[],
+				     struct wifi_dpp_params *params)
+{
+	int ret = 0;
+	int i = 1;
+
+	if (!strcmp(argv[i], "dpp_configurator_add")) {
+		params->action = WIFI_DPP_CONFIGURATOR_ADD;
+		ret = parse_dpp_args_configurator_add(sh, argc, argv, params);
+	} else if (!strcmp(argv[i], "dpp_auth_init")) {
+		params->action = WIFI_DPP_AUTH_INIT;
+		ret = parse_dpp_args_auth_init(sh, argc, argv, params);
+	} else if (!strcmp(argv[i], "dpp_qr_code")) {
+		params->action = WIFI_DPP_QR_CODE;
+		if (argc >= 3) {
+			strncpy(params->dpp_qr_code, argv[2], WIFI_DPP_QRCODE_MAX_LEN);
+		}
+	} else if (!strcmp(argv[i], "dpp_chirp")) {
+		params->action = WIFI_DPP_CHIRP;
+		ret = parse_dpp_args_chirp(sh, argc, argv, params);
+	} else if (!strcmp(argv[i], "dpp_listen")) {
+		params->action = WIFI_DPP_LISTEN;
+		ret = parse_dpp_args_listen(sh, argc, argv, params);
+	} else if (!strcmp(argv[i], "dpp_bootstrap_gen")) {
+		params->action = WIFI_DPP_BOOTSTRAP_GEN;
+		ret = parse_dpp_args_btstrap_gen(sh, argc, argv, params);
+	} else if (!strcmp(argv[i], "dpp_bootstrap_get_uri")) {
+		params->action = WIFI_DPP_BOOTSTRAP_GET_URI;
+		if (argc >= 3) {
+			params->id = shell_strtol(argv[2], 10, &ret);
+		}
+	} else if (argc >= 4 && !strcmp(argv[i], "set")) {
+		if (!strcmp(argv[i + 1], "dpp_configurator_params")) {
+			params->action = WIFI_DPP_SET_CONF_PARAM;
+			ret = parse_dpp_args_set_config_param(sh, argc, argv, params);
+		} else if (!strcmp(argv[i + 1], "dpp_resp_wait_time")) {
+			params->action = WIFI_DPP_SET_WAIT_RESP_TIME;
+			params->dpp_resp_wait_time = shell_strtol(argv[3], 10, &ret);
+		}
+	} else {
+		PR_ERROR("Unknown DPP command");
+		ret = -ENOEXEC;
+	}
+
+	return ret;
+}
+
+static int cmd_wifi_dpp(const struct shell *sh, size_t argc, char *argv[])
+{
+	int ret;
+	struct net_if *iface = net_if_get_first_wifi();
+	struct wifi_dpp_params params = {0};
+
+	ret = parse_dpp_args_to_params(sh, argc, argv, &params);
+	if (ret) {
+		PR_ERROR("parse DPP args fail ret %d", ret);
+		return ret;
+	}
+
+	if (net_mgmt(NET_REQUEST_WIFI_DPP, iface, &params, sizeof(params))) {
+		PR_WARNING("Failed to request DPP action\n");
+		return -ENOEXEC;
+	}
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(wifi_cmd_ap,
 	SHELL_CMD_ARG(disable, NULL,
 		  "Disable Access Point mode.\n",
@@ -2122,6 +2479,24 @@ SHELL_STATIC_SUBCMD_SET_CREATE(wifi_commands,
 		     cmd_wifi_set_rts_threshold,
 		     2,
 		     0),
+	SHELL_CMD_ARG(dpp,
+		      NULL,
+		      "DPP actions refer to hostap\n"
+		      "dpp_configurator_add [curve=P-256] [net_access_key_curve=P-256]\n"
+		      "dpp_auth_init [peer=<peer_bi_id>] [conf=sta-dpp/ap-dpp]"
+		      " [ssid=<SSID>] [configurator=<configurator_id>]"
+		      " [role=<configurator/enrollee/either>]"
+		      "dpp_qr_code <qr_code>\n"
+		      "dpp_chirp own=<own_bi_id> listen=<freq>\n"
+		      "dpp_listen <freq> role=<configurator/enrollee/either>\n"
+		      "dpp_bootstrap_gen type=qrcode chan=<opclass/channel> mac=<mac addr>"
+		      " [curve=P-256]\n"
+		      "set dpp_configurator_params [peer=peer_bi_id] [conf=sta-dpp] [ssid=<SSID>]"
+		      " [configurator=1] [curve=P-256] [net_access_key_curve=P-256]\n"
+		      "set dpp_resp_wait_time <time_ms>\n",
+		      cmd_wifi_dpp,
+		      2,
+		      CONFIG_SHELL_ARGC_MAX),
 	SHELL_SUBCMD_SET_END
 );
 
