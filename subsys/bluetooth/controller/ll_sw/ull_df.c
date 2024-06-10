@@ -401,7 +401,7 @@ uint8_t ll_df_set_cl_cte_tx_enable(uint8_t adv_handle, uint8_t cte_enable)
  * @return Status of command completion.
  *
  * @Note This function may put TX thread into wait state. This may lead to a
- *       situation that ll_sync_set instance is relased (RX thread has higher
+ *       situation that ll_sync_set instance is released (RX thread has higher
  *       priority than TX thread). ll_sync_set instance may not be accessed after
  *       call to ull_sync_slot_update.
  *       This is related with possible race condition with RX thread handling
@@ -762,7 +762,7 @@ static uint8_t per_adv_chain_cte_info_set(struct lll_adv_sync *lll_sync,
 						 pdu_add_field_flags, 0U,
 						 hdr_data_ptr);
 		if (err != BT_HCI_ERR_SUCCESS) {
-			/* TODO: implement gracefull error handling, cleanup of
+			/* TODO: implement graceful error handling, cleanup of
 			 * changed PDUs and notify host about issue during start
 			 * of CTE transmission.
 			 */
@@ -993,7 +993,7 @@ static uint8_t rem_cte_info_from_per_adv_chain(struct lll_adv_sync *lll_sync,
 	 */
 	new_chain = (*pdu_prev == *pdu ? false : true);
 
-	/* Get next PDU in a chain. Alway use pdu_prev because it points to actual
+	/* Get next PDU in a chain. Always use pdu_prev because it points to actual
 	 * former chain.
 	 */
 	pdu_chained = lll_adv_pdu_linked_next_get(*pdu_prev);
@@ -1020,7 +1020,7 @@ static uint8_t rem_cte_info_from_per_adv_chain(struct lll_adv_sync *lll_sync,
 							 pdu_rem_field_flags, NULL);
 			if (err != BT_HCI_ERR_SUCCESS) {
 				/* TODO: return here leaves periodic advertising chain in
-				 * an inconsistent state. Add gracefull return or assert.
+				 * an inconsistent state. Add graceful return or assert.
 				 */
 				return err;
 			}
@@ -1105,7 +1105,7 @@ static uint8_t cte_info_clear(struct ll_adv_set *adv, struct lll_df_adv_cfg *df_
 	err = ull_adv_sync_pdu_set_clear(lll_sync, pdu_prev, pdu, 0, pdu_rem_field_flags, NULL);
 	if (err != BT_HCI_ERR_SUCCESS) {
 		/* TODO: return here leaves periodic advertising chain in an inconsistent state.
-		 * Add gracefull return or assert.
+		 * Add graceful return or assert.
 		 */
 		return err;
 	}
@@ -1264,7 +1264,7 @@ static void df_conn_cte_req_disable(void *param)
 /* @brief Function enables or disables CTE request control procedure for a connection.
  *
  * The procedure may be enabled in two modes:
- * - single-shot, it is autmatically disabled when the occurrence finishes.
+ * - single-shot, it is automatically disabled when the occurrence finishes.
  * - periodic, it is executed periodically until disabled, connection is lost or PHY is changed
  *   to the one that does not support CTE.
  *
