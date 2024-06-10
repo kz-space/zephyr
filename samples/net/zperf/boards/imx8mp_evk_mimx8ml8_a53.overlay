@@ -1,0 +1,21 @@
+/*
+ * Copyright 2024 NXP
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&enet {
+	status = "okay";
+};
+
+&enet_mac {
+	status = "okay";
+};
+
+&enet_mdio {
+	status = "okay";
+};
+
+&phy {
+	status = "okay";
+};
