@@ -565,6 +565,17 @@ Networking
 Other Subsystems
 ****************
 
+Flash map
+=========
+
+* The crypto backend for the flash check functions (:kconfig:option:`CONFIG_FLASH_AREA_CHECK_INTEGRITY_BACKEND`),
+  previously provided through either TinyCrypt or Mbed TLS, is now provided through either PSA or Mbed TLS.
+  The updated Mbed TLS implementation has a slightly smaller footprint than the previous TinyCrypt one,
+  and the PSA implementation offers an even greater footprint reduction for devices built with TF-M.
+  PSA is the supported way forward, however as of now you may still use Mbed TLS if you cannot afford the
+  one-time cost of enabling the PSA API (:kconfig:option:`CONFIG_MBEDTLS_PSA_CRYPTO_C` for devices without TF-M).
+  :github:`73511`
+
 hawkBit
 =======
 
@@ -621,6 +632,15 @@ State Machine Framework
   exit actions from the current state to the topmost parent, with the expectation the topmost exit
   action would terminate the state machine. Passing ``NULL`` is now not allowed. Instead create a
   'terminate' state at the top level, and call :c:func:`smf_set_terminate` from its entry action.
+
+UpdateHub
+=========
+
+* The SHA-256 implementation used to perform integrity checks is not chosen with
+  :kconfig:option:`CONFIG_FLASH_AREA_CHECK_INTEGRITY_BACKEND` anymore. Instead, the implementation
+  used (now either Mbed TLS or PSA) is chosen based on :kconfig:option:`CONFIG_PSA_CRYPTO_CLIENT`.
+  It still defaults to using Mbed TLS (with a smaller footprint than previously) unless the
+  board is built with TF-M or :kconfig:option:`CONFIG_MBEDTLS_PSA_CRYPTO_C` is enabled. (:github:`73511`)
 
 ZBus
 ====
