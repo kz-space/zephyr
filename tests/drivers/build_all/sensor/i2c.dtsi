@@ -759,6 +759,11 @@ test_i2c_tcs3400: tcs3400@6b {
 	int-gpios = <&test_gpio 0 0>;
 };
 
+test_i2c_lsm9ds1: lsm9ds1@6b {
+	compatible = "st,lsm9ds1";
+	reg = <0x6b>;
+};
+
 test_i2c_tcn75a: tcn75a@6c {
 	compatible = "microchip,tcn75a";
 	reg = <0x6c>;
