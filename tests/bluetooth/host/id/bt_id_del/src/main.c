@@ -382,6 +382,7 @@ ZTEST(bt_id_del, test_scan_re_enabled_observer_enabled_ext_adv)
 
 	/* Make scan enabled flag true */
 	atomic_set_bit(bt_dev.flags, BT_DEV_SCANNING);
+	// TODO: address
 	atomic_set_bit(bt_dev.flags, BT_DEV_SCAN_LIMITED);
 
 	bt_conn_lookup_state_le_fake.return_val = NULL;

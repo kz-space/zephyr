@@ -691,8 +691,7 @@ static void rpa_timeout(struct k_work *work)
 	/* IF no roles using the RPA is running we can stop the RPA timer */
 	if (!(adv_enabled ||
 	      atomic_test_bit(bt_dev.flags, BT_DEV_INITIATING) ||
-	      (atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING) &&
-	       atomic_test_bit(bt_dev.flags, BT_DEV_ACTIVE_SCAN)))) {
+	      bt_le_scan_active_scanner_running())) {
 		return;
 	}
 

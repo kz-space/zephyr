@@ -7,6 +7,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "scan.h"
+
 /* LL connection parameters */
 #define LE_CONN_LATENCY		0x0000
 #define LE_CONN_TIMEOUT		0x002a
@@ -35,16 +37,11 @@ enum {
 	BT_DEV_HAS_PUB_KEY,
 	BT_DEV_PUB_KEY_BUSY,
 
-	/** The application explicitly instructed the stack to scan for advertisers
-	 * using the API @ref bt_le_scan_start().
-	 */
-	BT_DEV_EXPLICIT_SCAN,
-
 	/** The application either explicitly or implicitly instructed the stack to scan
 	 * for advertisers.
 	 *
 	 * Examples of such cases
-	 *  - Explicit scanning, @ref BT_DEV_EXPLICIT_SCAN.
+	 *  - Explicit scanning, @ref SCAN_ENABLED_REASON_EXPLICIT_SCAN.
 	 *  - The application instructed the stack to automatically connect if a given device
 	 *    is detected.
 	 *  - The application wants to connect to a peer device using private addresses, but
@@ -64,9 +61,6 @@ enum {
 	 * These are needed to ensure the same parameters are used when restarting
 	 * the scanner after refreshing an RPA.
 	 */
-	BT_DEV_ACTIVE_SCAN,
-	BT_DEV_SCAN_FILTER_DUP,
-	BT_DEV_SCAN_FILTERED,
 	BT_DEV_SCAN_LIMITED,
 
 	BT_DEV_INITIATING,
@@ -332,6 +326,7 @@ struct bt_dev {
 	uint8_t                    id_count;
 
 	struct bt_conn_le_create_param create_param;
+	struct scanner_state scanner_state;
 
 #if !defined(CONFIG_BT_EXT_ADV)
 	/* Legacy advertiser */
@@ -494,7 +489,7 @@ int bt_get_df_cte_type(uint8_t hci_cte_type);
  *
  * @return 0 in case of success, or a negative error code on failure.
  */
-int bt_le_scan_update(bool fast_scan);
+int bt_le_scan_update_and_reconfigure(enum scan_enabled_reason enable_reason, bool enable);
 
 int bt_le_create_conn(const struct bt_conn *conn);
 int bt_le_create_conn_cancel(void);

@@ -34,6 +34,7 @@
 #include "hci_core.h"
 #include "id.h"
 #include "adv.h"
+#include "scan.h"
 #include "conn_internal.h"
 #include "l2cap_internal.h"
 #include "keys.h"
@@ -1195,6 +1196,10 @@ void bt_conn_set_state(struct bt_conn *conn, bt_conn_state_t state)
 			 * the application through bt_conn_disconnect or by
 			 * timeout set by bt_conn_le_create_param.timeout.
 			 */
+			 /* TODO: these states are central only... */
+#ifdef CONFIG_BT_CENTRAL
+			bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SCAN_BEFORE_INITIATE, false);
+#endif
 			if (conn->err) {
 				notify_connected(conn);
 			}
@@ -1602,7 +1607,7 @@ int bt_conn_disconnect(struct bt_conn *conn, uint8_t reason)
 		conn->err = reason;
 		bt_conn_set_state(conn, BT_CONN_DISCONNECTED);
 		if (IS_ENABLED(CONFIG_BT_CENTRAL)) {
-			bt_le_scan_update(false);
+			bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SCAN_BEFORE_INITIATE, true);
 		}
 		return 0;
 	case BT_CONN_INITIATING:
@@ -3093,7 +3098,8 @@ int bt_conn_le_create_auto(const struct bt_conn_le_create_param *create_param,
 	/* Scanning either to connect or explicit scan, either case scanner was
 	 * started by application and should not be stopped.
 	 */
-	if (atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING)) {
+	if (!BT_LE_STATES_SCAN_INIT(bt_dev.le.states) &&
+	    atomic_test_bit(bt_dev.flags, BT_DEV_SCANNING)) {
 		return -EINVAL;
 	}
 
@@ -3176,7 +3182,8 @@ static int conn_le_create_common_checks(const bt_addr_le_t *peer,
 		return -EINVAL;
 	}
 
-	if (atomic_test_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN)) {
+	if (!BT_LE_STATES_SCAN_INIT(bt_dev.le.states) &&
+	    atomic_test_bit(bt_dev.scanner_state.scan_flags, SCAN_ENABLED_REASON_EXPLICIT_SCAN)) {
 		return -EAGAIN;
 	}
 
@@ -3245,7 +3252,7 @@ int bt_conn_le_create(const bt_addr_le_t *peer, const struct bt_conn_le_create_p
 		/* Use host-based identity resolving. */
 		bt_conn_set_state(conn, BT_CONN_SCAN_BEFORE_INITIATING);
 
-		err = bt_le_scan_update(true);
+		err = bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SCAN_BEFORE_INITIATE, true);
 		if (err) {
 			bt_conn_set_state(conn, BT_CONN_DISCONNECTED);
 			bt_conn_unref(conn);
@@ -3266,7 +3273,7 @@ int bt_conn_le_create(const bt_addr_le_t *peer, const struct bt_conn_le_create_p
 		bt_conn_set_state(conn, BT_CONN_DISCONNECTED);
 		bt_conn_unref(conn);
 
-		bt_le_scan_update(false);
+		bt_le_scan_update_and_reconfigure(SCAN_UPDATE_JUST_CHECK, true);
 		return err;
 	}
 
@@ -3373,7 +3380,8 @@ int bt_le_set_auto_conn(const bt_addr_le_t *addr,
 		if (param) {
 			bt_conn_set_state(conn, BT_CONN_SCAN_BEFORE_INITIATING);
 		}
-		bt_le_scan_update(false);
+
+		bt_le_scan_update_and_reconfigure(SCAN_ENABLED_REASON_SCAN_BEFORE_INITIATE, true);
 	}
 
 	bt_conn_unref(conn);
