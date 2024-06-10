@@ -135,7 +135,11 @@ int net_ipv4_finalize(struct net_pkt *pkt, uint8_t next_header_proto)
 		   next_header_proto == IPPROTO_TCP) {
 		return net_tcp_finalize(pkt, false);
 	} else if (next_header_proto == IPPROTO_ICMP) {
+#ifdef CONFIG_NET_FORCE_ICMP_CHECKSUM
+		return net_icmpv4_finalize(pkt, true);
+#else
 		return net_icmpv4_finalize(pkt, false);
+#endif
 	}
 
 	return 0;
