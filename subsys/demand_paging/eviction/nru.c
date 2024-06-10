@@ -49,9 +49,17 @@ struct z_page_frame *k_mem_paging_eviction_select(bool *dirty_ptr)
 	bool accessed;
 	bool last_dirty = false;
 	bool dirty = false;
-	uintptr_t flags, phys;
+	uintptr_t flags;
+	uint32_t pf_idx;
+	static uint32_t last_pf_idx;
 
-	Z_PAGE_FRAME_FOREACH(phys, pf) {
+	/* similar to Z_PAGE_FRAME_FOREACH except we don't always start at 0 */
+	last_pf_idx = (last_pf_idx + 1) % ARRAY_SIZE(z_page_frames);
+	pf_idx = last_pf_idx;
+	do {
+		pf = &z_page_frames[pf_idx];
+		pf_idx = (pf_idx + 1) % ARRAY_SIZE(z_page_frames);
+
 		unsigned int prec;
 
 		if (!z_page_frame_is_evictable(pf)) {
@@ -83,10 +91,12 @@ struct z_page_frame *k_mem_paging_eviction_select(bool *dirty_ptr)
 			last_pf = pf;
 			last_dirty = dirty;
 		}
-	}
+	} while (pf_idx != last_pf_idx);
+
 	/* Shouldn't ever happen unless every page is pinned */
 	__ASSERT(last_pf != NULL, "no page to evict");
 
+	last_pf_idx = last_pf - z_page_frames;
 	*dirty_ptr = last_dirty;
 
 	return last_pf;
