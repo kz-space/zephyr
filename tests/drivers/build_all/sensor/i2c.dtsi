@@ -219,6 +219,11 @@ test_i2c_sgp40: sgp40@1e {
 	enable-selftest;
 };
 
+test_i2c_lsm9ds1_mag: lsm9ds1_mag@1e {
+	compatible = "st,lsm9ds1_mag";
+	reg = <0x1e>;
+};
+
 test_i2c_sht3xd: sht3xd@1f {
 	compatible = "sensirion,sht3xd";
 	reg = <0x1f>;
@@ -757,6 +762,11 @@ test_i2c_tcs3400: tcs3400@6b {
 	compatible = "ams,tcs3400";
 	reg = <0x6b>;
 	int-gpios = <&test_gpio 0 0>;
+};
+
+test_i2c_lsm9ds1: lsm9ds1@6b {
+	compatible = "st,lsm9ds1";
+	reg = <0x6b>;
 };
 
 test_i2c_tcn75a: tcn75a@6c {
