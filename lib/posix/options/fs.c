@@ -59,34 +59,34 @@ static inline void posix_fs_free_obj(struct posix_fs_desc *ptr)
 	ptr->used = false;
 }
 
-static int posix_mode_to_zephyr(int mf)
+static int posix_mode_to_zephyr(int flags, int mode)
 {
-	int mode = (mf & O_CREAT) ? FS_O_CREATE : 0;
+	int zmode = ((flags & O_CREAT) != 0) ? FS_O_CREATE : 0;
 
-	mode |= (mf & O_APPEND) ? FS_O_APPEND : 0;
+	zmode |= (flags & O_APPEND) ? FS_O_APPEND : 0;
 
-	switch (mf & O_ACCMODE) {
+	switch (mode) {
 	case O_RDONLY:
-		mode |= FS_O_READ;
+		zmode |= FS_O_READ;
 		break;
 	case O_WRONLY:
-		mode |= FS_O_WRITE;
+		zmode |= FS_O_WRITE;
 		break;
 	case O_RDWR:
-		mode |= FS_O_RDWR;
+		zmode |= FS_O_RDWR;
 		break;
 	default:
 		break;
 	}
 
-	return mode;
+	return zmode;
 }
 
-int zvfs_open(const char *name, int flags)
+int zvfs_open(const char *name, int flags, int mode)
 {
 	int rc, fd;
 	struct posix_fs_desc *ptr = NULL;
-	int zmode = posix_mode_to_zephyr(flags);
+	int zmode = posix_mode_to_zephyr(flags, mode);
 
 	if (zmode < 0) {
 		return zmode;
