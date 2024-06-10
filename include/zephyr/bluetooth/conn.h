@@ -1254,6 +1254,8 @@ struct bt_conn_cb {
  *
  *  Register callbacks to monitor the state of connections.
  *
+ *  @note Registering the same callback struct twice is not supported.
+ *
  *  @param cb Callback struct. Must point to memory that remains valid.
  */
 void bt_conn_cb_register(struct bt_conn_cb *cb);
@@ -1733,6 +1735,8 @@ int bt_conn_auth_cb_overlay(struct bt_conn *conn, const struct bt_conn_auth_cb *
  *
  *  Register callbacks to get authenticated pairing information. Multiple
  *  registrations can be done.
+ *
+ *  @note Registering the same callback struct twice is not supported.
  *
  *  @param cb Callback struct.
  *

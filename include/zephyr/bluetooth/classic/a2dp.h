@@ -685,8 +685,6 @@ struct bt_a2dp_stream_ops {
 /**
  * @brief Register Audio callbacks for a stream.
  *
- * Register Audio callbacks for a stream.
- *
  * @param stream Stream object.
  * @param ops    Stream operations structure.
  */
