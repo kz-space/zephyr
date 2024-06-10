@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 
+#include <zephyr/drivers/display.h>
 #include <zephyr/drivers/video.h>
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
@@ -15,39 +16,85 @@ LOG_MODULE_REGISTER(main);
 
 #define VIDEO_DEV_SW "VIDEO_SW_GENERATOR"
 
+#ifdef CONFIG_VIDEO_MCUX_MIPI_CSI2RX
+#define DISPLAY_FORMAT PIXEL_FORMAT_ARGB_8888
+#else
+#define DISPLAY_FORMAT PIXEL_FORMAT_BGR_565
+#endif
+
+#ifdef CONFIG_MCUX_ELCDIF_PXP
+#define BUFFER_ALIGN 64
+#endif
+
+#if DT_HAS_CHOSEN(zephyr_display)
+void display_setup(const struct device *const display_dev)
+{
+	struct display_capabilities capabilities;
+
+	if (!device_is_ready(display_dev)) {
+		LOG_ERR("Device %s not found", display_dev->name);
+		return;
+	}
+
+	printk("\nDisplay device: %s\n", display_dev->name);
+
+	display_get_capabilities(display_dev, &capabilities);
+
+	printk("- Capabilities:\n");
+	printk("  x_resolution = %u, y_resolution = %u, supported_pixel_formats = %u\n"
+	       "  current_pixel_format = %u, current_orientation = %u\n\n",
+	       capabilities.x_resolution, capabilities.y_resolution,
+	       capabilities.supported_pixel_formats, capabilities.current_pixel_format,
+	       capabilities.current_orientation);
+
+	display_set_pixel_format(display_dev, DISPLAY_FORMAT);
+}
+
+void video_display_frame(const struct device *const display_dev, struct video_buffer *vbuf,
+			 struct video_format fmt)
+{
+	struct display_buffer_descriptor buf_desc;
+
+	buf_desc.buf_size = vbuf->bytesused;
+	buf_desc.width = fmt.width;
+	buf_desc.pitch = buf_desc.width;
+	buf_desc.height = fmt.height;
+
+	display_write(display_dev, 0, 0, &buf_desc, vbuf->buffer);
+
+	display_blanking_off(display_dev);
+}
+#endif
+
 int main(void)
 {
 	struct video_buffer *buffers[2], *vbuf;
 	struct video_format fmt;
 	struct video_caps caps;
-	const struct device *video;
 	unsigned int frame = 0;
 	size_t bsize;
 	int i = 0;
 
-	/* Default to software video pattern generator */
-	video = device_get_binding(VIDEO_DEV_SW);
-	if (video == NULL) {
-		LOG_ERR("Video device %s not found", VIDEO_DEV_SW);
+#if DT_HAS_CHOSEN(zephyr_camera)
+	const struct device *const video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
+
+	if (!device_is_ready(video_dev)) {
+		LOG_ERR("%s: video device is not ready", video_dev->name);
 		return 0;
 	}
+#else
+	const struct device *const video_dev = device_get_binding(VIDEO_DEV_SW);
 
-	/* But would be better to use a real video device if any */
-#if defined(CONFIG_VIDEO_MCUX_CSI)
-	const struct device *const dev = DEVICE_DT_GET_ONE(nxp_imx_csi);
-
-	if (!device_is_ready(dev)) {
-		LOG_ERR("%s: device not ready.\n", dev->name);
+	if (video_dev == NULL) {
+		LOG_ERR("%s: video device not found or failed to initialized", VIDEO_DEV_SW);
 		return 0;
 	}
-
-	video = dev;
 #endif
 
-	printk("- Device name: %s\n", video->name);
+	printk("Video device: %s\n", video_dev->name);
 
 	/* Get capabilities */
-	if (video_get_caps(video, VIDEO_EP_OUT, &caps)) {
+	if (video_get_caps(video_dev, VIDEO_EP_OUT, &caps)) {
 		LOG_ERR("Unable to retrieve video capabilities");
 		return 0;
 	}
@@ -57,43 +104,54 @@ int main(void)
 		const struct video_format_cap *fcap = &caps.format_caps[i];
 		/* fourcc to string */
 		printk("  %c%c%c%c width [%u; %u; %u] height [%u; %u; %u]\n",
-		       (char)fcap->pixelformat,
-		       (char)(fcap->pixelformat >> 8),
-		       (char)(fcap->pixelformat >> 16),
-		       (char)(fcap->pixelformat >> 24),
-		       fcap->width_min, fcap->width_max, fcap->width_step,
-		       fcap->height_min, fcap->height_max, fcap->height_step);
+		       (char)fcap->pixelformat, (char)(fcap->pixelformat >> 8),
+		       (char)(fcap->pixelformat >> 16), (char)(fcap->pixelformat >> 24),
+		       fcap->width_min, fcap->width_max, fcap->width_step, fcap->height_min,
+		       fcap->height_max, fcap->height_step);
 		i++;
 	}
 
 	/* Get default/native format */
-	if (video_get_format(video, VIDEO_EP_OUT, &fmt)) {
+	if (video_get_format(video_dev, VIDEO_EP_OUT, &fmt)) {
 		LOG_ERR("Unable to retrieve video format");
 		return 0;
 	}
 
 	printk("- Default format: %c%c%c%c %ux%u\n", (char)fmt.pixelformat,
-	       (char)(fmt.pixelformat >> 8),
-	       (char)(fmt.pixelformat >> 16),
-	       (char)(fmt.pixelformat >> 24),
-	       fmt.width, fmt.height);
+	       (char)(fmt.pixelformat >> 8), (char)(fmt.pixelformat >> 16),
+	       (char)(fmt.pixelformat >> 24), fmt.width, fmt.height);
+
+#if DT_HAS_CHOSEN(zephyr_display)
+	const struct device *const display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+
+	if (!device_is_ready(display_dev)) {
+		LOG_ERR("%s: display device not ready.", display_dev->name);
+		return 0;
+	}
+
+	display_setup(display_dev);
+#endif
 
 	/* Size to allocate for each buffer */
 	bsize = fmt.pitch * fmt.height;
 
 	/* Alloc video buffers and enqueue for capture */
 	for (i = 0; i < ARRAY_SIZE(buffers); i++) {
+#ifdef BUFFER_ALIGN
+		buffers[i] = video_buffer_aligned_alloc(bsize, BUFFER_ALIGN);
+#else
 		buffers[i] = video_buffer_alloc(bsize);
+#endif
 		if (buffers[i] == NULL) {
 			LOG_ERR("Unable to alloc video buffer");
 			return 0;
 		}
 
-		video_enqueue(video, VIDEO_EP_OUT, buffers[i]);
+		video_enqueue(video_dev, VIDEO_EP_OUT, buffers[i]);
 	}
 
 	/* Start video capture */
-	if (video_stream_start(video)) {
+	if (video_stream_start(video_dev)) {
 		LOG_ERR("Unable to start capture (interface)");
 		return 0;
 	}
@@ -104,16 +162,20 @@ int main(void)
 	while (1) {
 		int err;
 
-		err = video_dequeue(video, VIDEO_EP_OUT, &vbuf, K_FOREVER);
+		err = video_dequeue(video_dev, VIDEO_EP_OUT, &vbuf, K_FOREVER);
 		if (err) {
 			LOG_ERR("Unable to dequeue video buf");
 			return 0;
 		}
 
-		printk("\rGot frame %u! size: %u; timestamp %u ms",
-		       frame++, vbuf->bytesused, vbuf->timestamp);
+		printk("\rGot frame %u! size: %u; timestamp %u ms\n", frame++, vbuf->bytesused,
+		       vbuf->timestamp);
 
-		err = video_enqueue(video, VIDEO_EP_OUT, vbuf);
+#if DT_HAS_CHOSEN(zephyr_display)
+		video_display_frame(display_dev, vbuf, fmt);
+#endif
+
+		err = video_enqueue(video_dev, VIDEO_EP_OUT, vbuf);
 		if (err) {
 			LOG_ERR("Unable to requeue video buf");
 			return 0;
