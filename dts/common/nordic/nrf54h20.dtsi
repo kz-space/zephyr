@@ -44,7 +44,7 @@
 			nordic,bus-width = <32>;
 
 			cpuppr_vevif_local: mailbox {
-				compatible = "nordic,nrf-vevif-local";
+				compatible = "nordic,nrf-vevif-task-rx";
 				status = "disabled";
 				interrupt-parent = <&cpuppr_clic>;
 				interrupts = <0 NRF_DEFAULT_IRQ_PRIORITY>,
@@ -413,7 +413,7 @@
 			};
 
 			cpusys_vevif_remote: mailbox@8c8000 {
-				compatible = "nordic,nrf-vevif-remote";
+				compatible = "nordic,nrf-vevif-task-tx";
 				reg = <0x8c8000 0x1000>;
 				status = "disabled";
 				#mbox-cells = <1>;
@@ -518,7 +518,7 @@
 				ranges = <0x0 0x908000 0x4000>;
 
 				cpuppr_vevif_remote: mailbox@0 {
-					compatible = "nordic,nrf-vevif-remote";
+					compatible = "nordic,nrf-vevif-task-tx";
 					reg = <0x0 0x1000>;
 					status = "disabled";
 					#mbox-cells = <1>;
