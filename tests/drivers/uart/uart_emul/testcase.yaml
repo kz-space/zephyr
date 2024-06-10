@@ -5,4 +5,22 @@ common:
   harness: ztest
 tests:
   drivers.uart.emul.polling:
-    platform_allow: qemu_x86
+    platform_allow:
+      - qemu_x86
+      - native_sim
+    extra_args: DTC_OVERLAY_FILE="uart_emul.overlay"
+  drivers.uart.emul.interrupt_driven:
+    platform_allow:
+      - qemu_x86
+      - native_sim
+    extra_configs:
+      - CONFIG_UART_INTERRUPT_DRIVEN=y
+    extra_args: DTC_OVERLAY_FILE="uart_emul.overlay"
+  drivers.uart.emul.async:
+    platform_allow:
+      - qemu_x86
+      - native_sim
+    extra_configs:
+      - CONFIG_EVENTS=y
+      - CONFIG_UART_ASYNC_API=y
+    extra_args: DTC_OVERLAY_FILE="uart_emul.overlay"

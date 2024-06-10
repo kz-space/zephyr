@@ -110,3 +110,9 @@ tests:
     extra_args:
       - DTC_OVERLAY_FILE="boards/nucleo_h723zg.overlay;boards/nucleo_h723zg_nocachemem.overlay"
       - EXTRA_CONF_FILE=stm32_nocache_mem_dt.conf
+  drivers.uart.async_api.uart_emul:
+    harness: ztest
+    platform_allow:
+      - qemu_x86
+      - native_sim
+    extra_args: DTC_OVERLAY_FILE="boards/uart_emul.overlay"

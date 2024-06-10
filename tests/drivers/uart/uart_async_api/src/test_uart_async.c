@@ -584,7 +584,16 @@ ZTEST_USER(uart_async_read_abort, test_read_abort)
 
 	uart_tx(uart_dev, tx_buf, 95, 100 * USEC_PER_MSEC);
 
+#if !DT_NODE_HAS_COMPAT(UART_NODE, zephyr_uart_emul)
 	k_timer_start(&read_abort_timer, K_USEC(300), K_NO_WAIT);
+#else
+	/* The uart emulation driver needs no real time to send and receive data. Any waiting here
+	 * will lead to the driver being finished with sending and receiving. So instead of using
+	 * the timer here, just disable receiving before the driver had any chance to start with
+	 * processing its tasks.
+	 */
+	uart_rx_disable(uart_dev);
+#endif
 
 	/* RX will be aborted from k_timer timeout */
 

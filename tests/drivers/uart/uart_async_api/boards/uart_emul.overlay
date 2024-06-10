@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2023 Fabian Blatz
+ * Copyright (c) 2024 grandcentrix GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	dut: uart-emul {
+		compatible = "zephyr,uart-emul";
+		status = "okay";
+		current-speed = <0>;
+		rx-fifo-size = <256>;
+		tx-fifo-size = <256>;
+
+		/* The test expects the loopback fixture to be inplace */
+		loopback;
+	};
+};
