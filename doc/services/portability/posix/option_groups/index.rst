@@ -603,18 +603,21 @@ Additional POSIX Options
 _POSIX_ASYNCHRONOUS_IO
 ++++++++++++++++++++++
 
+Functions part of the ``_POSIX_ASYNCHRONOUS_IO`` Option are not supported in Zephyr at this time.
+These functions will fail with ``ENOSYS`` :ref:`†<posix_undefined_behaviour>`.
+
 .. csv-table:: _POSIX_ASYNCHRONOUS_IO
    :header: API, Supported
    :widths: 50,10
 
-    aio_cancel(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    aio_error(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    aio_fsync(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    aio_read(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    aio_return(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    aio_suspend(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    aio_write(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
-    lio_listio(),yes (will fail with ``ENOSYS``:ref:`†<posix_undefined_behaviour>`)
+    aio_cancel(),yes
+    aio_error(),yes
+    aio_fsync(),yes
+    aio_read(),yes
+    aio_return(),yes
+    aio_suspend(),yes
+    aio_write(),yes
+    lio_listio(),yes
 
 .. _posix_option_cputime:
 
