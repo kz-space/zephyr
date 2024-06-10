@@ -3537,6 +3537,8 @@ Renesas SmartBond Platforms:
     - ioannis-karachalios
     - andrzej-kaczmarek
     - blauret
+  collaborators:
+    - ydamigos
   files:
     - boards/renesas/da14*/
     - drivers/*/*smartbond*
@@ -4431,6 +4433,7 @@ West:
   collaborators:
     - blauret
     - andrzej-kaczmarek
+    - ydamigos
   files: []
   labels:
     - "platform: Renesas"
