@@ -19,17 +19,20 @@ LOG_MODULE_REGISTER(main);
 #include <zephyr/drivers/spi.h>
 #include <zephyr/sys/util.h>
 
-#define STRIP_NODE		DT_ALIAS(led_strip)
+#define STRIP_NODE DT_ALIAS(led_strip)
 
 #if DT_NODE_HAS_PROP(DT_ALIAS(led_strip), chain_length)
-#define STRIP_NUM_PIXELS	DT_PROP(DT_ALIAS(led_strip), chain_length)
+#define STRIP_NUM_PIXELS DT_PROP(DT_ALIAS(led_strip), chain_length)
 #else
 #error Unable to determine length of LED strip
 #endif
 
 #define DELAY_TIME K_MSEC(CONFIG_SAMPLE_LED_UPDATE_DELAY)
 
-#define RGB(_r, _g, _b) { .r = (_r), .g = (_g), .b = (_b) }
+#define RGB(_r, _g, _b)                                                                            \
+	{                                                                                          \
+		.r = (_r), .g = (_g), .b = (_b)                                                    \
+	}
 
 static const struct led_rgb colors[] = {
 	RGB(0x0f, 0x00, 0x00), /* red */
