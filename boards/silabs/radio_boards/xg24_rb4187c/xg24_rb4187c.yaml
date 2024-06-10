@@ -1,0 +1,21 @@
+identifier: xg24_rb4187c
+name: BRD4187C
+type: mcu
+arch: arm
+ram: 256
+flash: 1536
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - gpio
+  - uart
+  - watchdog
+testing:
+  ignore_tags:
+    - net
+    - bluetooth
+    - pm
+    - hwinfo
+vendor: silabs

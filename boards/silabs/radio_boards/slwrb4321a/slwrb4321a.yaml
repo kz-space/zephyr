@@ -1,0 +1,21 @@
+identifier: slwrb4321a
+name: SLWRB4321A radio board for EFM32GG11
+type: mcu
+arch: arm
+ram: 512
+flash: 2048
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - counter
+  - i2c
+  - gpio
+  - netif:eth
+  - nvs
+  - uart
+testing:
+  ignore_tags:
+    - bluetooth
+vendor: silabs
