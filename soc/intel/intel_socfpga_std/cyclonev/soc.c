@@ -26,12 +26,12 @@ void arch_reserved_pages_update(void)
 	uintptr_t end = ROUND_UP(addr + len, CONFIG_MMU_PAGE_SIZE);
 
 	for (; pos < end; pos += CONFIG_MMU_PAGE_SIZE) {
-		if (!z_is_page_frame(pos)) {
+		if (!mm_vm_is_page_frame(pos)) {
 			continue;
 		}
-		struct z_page_frame *pf = z_phys_to_page_frame(pos);
+		struct mm_vm_page_frame *pf = mm_vm_phys_to_page_frame(pos);
 
-		z_page_frame_set(pf, Z_PAGE_FRAME_RESERVED);
+		mm_vm_page_frame_set(pf, MM_VM_PAGE_FRAME_RESERVED);
 	}
 }
 

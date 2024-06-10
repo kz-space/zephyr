@@ -15,7 +15,105 @@
 #include <zephyr/kernel/mm.h>
 #include <zephyr/linker/linker-defs.h>
 
-/*
+/** Start address of physical memory. */
+#define MM_PHYS_RAM_START	((uintptr_t)CONFIG_SRAM_BASE_ADDRESS)
+
+/** Size of physical memory. */
+#define MM_PHYS_RAM_SIZE	(KB(CONFIG_SRAM_SIZE))
+
+/** End address (exclusive) of physical memory. */
+#define MM_PHYS_RAM_END		(MM_PHYS_RAM_START + MM_PHYS_RAM_SIZE)
+
+/** Start address of virtual memory. */
+#define MM_VIRT_RAM_START	((uint8_t *)CONFIG_KERNEL_VM_BASE)
+
+/** Size of virtual memory. */
+#define MM_VIRT_RAM_SIZE	((size_t)CONFIG_KERNEL_VM_SIZE)
+
+/** End address (exclusive) of virtual memory. */
+#define MM_VIRT_RAM_END		(MM_VIRT_RAM_START + MM_VIRT_RAM_SIZE)
+
+/** Boot-time virtual start address of the kernel image. */
+#define MM_KERNEL_VIRT_START	((uint8_t *)&z_mapped_start[0])
+
+/** Boot-time virtual end address of the kernel image. */
+#define MM_KERNEL_VIRT_END	((uint8_t *)&z_mapped_end[0])
+
+/** Boot-time virtual address space size of the kernel image. */
+#define MM_KERNEL_VIRT_SIZE	(MM_KERNEL_VIRT_END - MM_KERNEL_VIRT_START)
+
+/**
+ * @brief Offset for translating between static physical and virtual addresses.
+ *
+ * @note Do not use directly unless you know exactly what you are going.
+ */
+#define MM_MEMMAP_VM_OFFSET	\
+	((CONFIG_KERNEL_VM_BASE + CONFIG_KERNEL_VM_OFFSET) - \
+	 (CONFIG_SRAM_BASE_ADDRESS + CONFIG_SRAM_OFFSET))
+
+/**
+ * @brief Get physical address from virtual address for boot RAM mappings.
+ *
+ * @note Only applies to boot RAM mappings within the Zephyr image that have never
+ *       been remapped or paged out. Never use this unless you know exactly what you
+ *       are doing.
+ *
+ * @param virt Virtual address.
+ *
+ * @return Physical address.
+ */
+#define MM_MEMMAP_BOOT_VIRT_TO_PHYS(virt) \
+	((uintptr_t)(((uint8_t *)(virt)) - MM_MEMMAP_VM_OFFSET))
+
+/**
+ * @brief Get virtual address from physical address for boot RAM mappings.
+ *
+ * @note Only applies to boot RAM mappings within the Zephyr image that have never
+ *       been remapped or paged out. Never use this unless you know exactly what you
+ *       are doing.
+ *
+ * @param phys Physical address.
+ *
+ * @return Virtual address.
+ */
+#define MM_MEMMAP_BOOT_PHYS_TO_VIRT(phys) \
+	((uint8_t *)(((uintptr_t)(phys)) + MM_MEMMAP_VM_OFFSET))
+
+/**
+ * @def MM_VM_FREE_START
+ * @brief Start address of unused, available virtual addresses.
+ *
+ * This is the start address of the virtual memory region where
+ * addresses can be allocated for memory mapping. This depends on whether
+ * CONFIG_ARCH_MAPS_ALL_RAM is enabled:
+ *
+ * - If it is enabled, which means all physical memory are mapped in virtual
+ *   memory address space, and it is the same as
+ *   (CONFIG_SRAM_BASE_ADDRESS + CONFIG_SRAM_SIZE).
+ *
+ * - If it is disabled, MM_VM_FREE_START is the same MM_KERNEL_VIRT_END which
+ *   is the end of the kernel image.
+ *
+ */
+#ifdef CONFIG_ARCH_MAPS_ALL_RAM
+#define MM_VM_FREE_START	MM_MEMMAP_BOOT_PHYS_TO_VIRT(MM_PHYS_RAM_END)
+#else
+#define MM_VM_FREE_START	MM_KERNEL_VIRT_END
+#endif /* CONFIG_ARCH_MAPS_ALL_RAM */
+
+/**
+ * @defgroup kernel_mm_page_frame_apis Kernel Memory Page Frame Management APIs
+ * @ingroup kernel_mm_internal_apis
+ * @{
+ *
+ * Macros and data structures for physical page frame accounting,
+ * APIs for use by eviction and backing store algorithms. This code
+ * is otherwise not application-facing.
+ */
+
+/**
+ * @brief Number of page frames.
+ *
  * At present, page frame management is only done for main system RAM,
  * and we generate paging structures based on CONFIG_SRAM_BASE_ADDRESS
  * and CONFIG_SRAM_SIZE.
@@ -25,59 +123,24 @@
  * anonymous mappings. We don't currently maintain an ontology of these in the
  * core kernel.
  */
-#define Z_PHYS_RAM_START	((uintptr_t)CONFIG_SRAM_BASE_ADDRESS)
-#define Z_PHYS_RAM_SIZE		(KB(CONFIG_SRAM_SIZE))
-#define Z_PHYS_RAM_END		(Z_PHYS_RAM_START + Z_PHYS_RAM_SIZE)
-#define Z_NUM_PAGE_FRAMES	(Z_PHYS_RAM_SIZE / (size_t)CONFIG_MMU_PAGE_SIZE)
-
-/** End virtual address of virtual address space */
-#define Z_VIRT_RAM_START	((uint8_t *)CONFIG_KERNEL_VM_BASE)
-#define Z_VIRT_RAM_SIZE		((size_t)CONFIG_KERNEL_VM_SIZE)
-#define Z_VIRT_RAM_END		(Z_VIRT_RAM_START + Z_VIRT_RAM_SIZE)
-
-/* Boot-time virtual location of the kernel image. */
-#define Z_KERNEL_VIRT_START	((uint8_t *)&z_mapped_start[0])
-#define Z_KERNEL_VIRT_END	((uint8_t *)&z_mapped_end[0])
-#define Z_KERNEL_VIRT_SIZE	(Z_KERNEL_VIRT_END - Z_KERNEL_VIRT_START)
-
-#define Z_VM_OFFSET	 ((CONFIG_KERNEL_VM_BASE + CONFIG_KERNEL_VM_OFFSET) - \
-			  (CONFIG_SRAM_BASE_ADDRESS + CONFIG_SRAM_OFFSET))
-
-/* Only applies to boot RAM mappings within the Zephyr image that have never
- * been remapped or paged out. Never use this unless you know exactly what you
- * are doing.
- */
-#define Z_BOOT_VIRT_TO_PHYS(virt) ((uintptr_t)(((uint8_t *)(virt)) - Z_VM_OFFSET))
-#define Z_BOOT_PHYS_TO_VIRT(phys) ((uint8_t *)(((uintptr_t)(phys)) + Z_VM_OFFSET))
-
-#ifdef CONFIG_ARCH_MAPS_ALL_RAM
-#define Z_FREE_VM_START	Z_BOOT_PHYS_TO_VIRT(Z_PHYS_RAM_END)
-#else
-#define Z_FREE_VM_START	Z_KERNEL_VIRT_END
-#endif /* CONFIG_ARCH_MAPS_ALL_RAM */
+#define MM_VM_NUM_PAGE_FRAMES	(MM_PHYS_RAM_SIZE / (size_t)CONFIG_MMU_PAGE_SIZE)
 
 /*
- * Macros and data structures for physical page frame accounting,
- * APIs for use by eviction and backing store algorithms. This code
- * is otherwise not application-facing.
- */
-
-/*
- * z_page_frame flags bits
+ * mm_vm_page_frame flags bits
  *
  * Requirements:
- * - Z_PAGE_FRAME_FREE must be one of the possible sfnode flag bits
+ * - MM_VM_PAGE_FRAME_FREE must be one of the possible sfnode flag bits
  * - All bit values must be lower than CONFIG_MMU_PAGE_SIZE
  */
 
 /** This physical page is free and part of the free list */
-#define Z_PAGE_FRAME_FREE		BIT(0)
+#define MM_VM_PAGE_FRAME_FREE		BIT(0)
 
 /** This physical page is reserved by hardware; we will never use it */
-#define Z_PAGE_FRAME_RESERVED		BIT(1)
+#define MM_VM_PAGE_FRAME_RESERVED	BIT(1)
 
 /** This page contains critical kernel data and will never be swapped */
-#define Z_PAGE_FRAME_PINNED		BIT(2)
+#define MM_VM_PAGE_FRAME_PINNED		BIT(2)
 
 /**
  * This physical page is mapped to some virtual memory address
@@ -85,17 +148,17 @@
  * Currently, we just support one mapping per page frame. If a page frame
  * is mapped to multiple virtual pages then it must be pinned.
  */
-#define Z_PAGE_FRAME_MAPPED		BIT(3)
+#define MM_VM_PAGE_FRAME_MAPPED		BIT(3)
 
 /**
  * This page frame is currently involved in a page-in/out operation
  */
-#define Z_PAGE_FRAME_BUSY		BIT(4)
+#define MM_VM_PAGE_FRAME_BUSY		BIT(4)
 
 /**
  * This page frame has a clean copy in the backing store
  */
-#define Z_PAGE_FRAME_BACKED		BIT(5)
+#define MM_VM_PAGE_FRAME_BACKED		BIT(5)
 
 /**
  * Data structure for physical page frames
@@ -103,17 +166,17 @@
  * An array of these is instantiated, one element per physical RAM page.
  * Hence it's necessary to constrain its size as much as possible.
  */
-struct z_page_frame {
+struct mm_vm_page_frame {
 	union {
 		/*
-		 * If mapped, Z_PAGE_FRAME_* flags and virtual address
+		 * If mapped, MM_VM_PAGE_FRAME_* flags and virtual address
 		 * this page is mapped to.
 		 */
 		uintptr_t va_and_flags;
 
 		/*
 		 * If unmapped and available, free pages list membership
-		 * with the Z_PAGE_FRAME_FREE flag.
+		 * with the MM_VM_PAGE_FRAME_FREE flag.
 		 */
 		sys_sfnode_t node;
 	};
@@ -121,68 +184,68 @@ struct z_page_frame {
 	/* Backing store and eviction algorithms may both need to
 	 * require additional per-frame custom data for accounting purposes.
 	 * They should declare their own array with indices matching
-	 * z_page_frames[] ones whenever possible.
+	 * mm_vm_page_frames[] ones whenever possible.
 	 * They may also want additional flags bits that could be stored here
 	 * and they shouldn't clobber each other. At all costs the total
-	 * size of struct z_page_frame must be minimized.
+	 * size of struct mm_vm_page_frame must be minimized.
 	 */
 };
 
 /* Note: this must be false for the other flag bits to be valid */
-static inline bool z_page_frame_is_free(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_free(struct mm_vm_page_frame *pf)
 {
-	return (pf->va_and_flags & Z_PAGE_FRAME_FREE) != 0U;
+	return (pf->va_and_flags & MM_VM_PAGE_FRAME_FREE) != 0U;
 }
 
-static inline bool z_page_frame_is_pinned(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_pinned(struct mm_vm_page_frame *pf)
 {
-	return (pf->va_and_flags & Z_PAGE_FRAME_PINNED) != 0U;
+	return (pf->va_and_flags & MM_VM_PAGE_FRAME_PINNED) != 0U;
 }
 
-static inline bool z_page_frame_is_reserved(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_reserved(struct mm_vm_page_frame *pf)
 {
-	return (pf->va_and_flags & Z_PAGE_FRAME_RESERVED) != 0U;
+	return (pf->va_and_flags & MM_VM_PAGE_FRAME_RESERVED) != 0U;
 }
 
-static inline bool z_page_frame_is_mapped(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_mapped(struct mm_vm_page_frame *pf)
 {
-	return (pf->va_and_flags & Z_PAGE_FRAME_MAPPED) != 0U;
+	return (pf->va_and_flags & MM_VM_PAGE_FRAME_MAPPED) != 0U;
 }
 
-static inline bool z_page_frame_is_busy(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_busy(struct mm_vm_page_frame *pf)
 {
-	return (pf->va_and_flags & Z_PAGE_FRAME_BUSY) != 0U;
+	return (pf->va_and_flags & MM_VM_PAGE_FRAME_BUSY) != 0U;
 }
 
-static inline bool z_page_frame_is_backed(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_backed(struct mm_vm_page_frame *pf)
 {
-	return (pf->va_and_flags & Z_PAGE_FRAME_BACKED) != 0U;
+	return (pf->va_and_flags & MM_VM_PAGE_FRAME_BACKED) != 0U;
 }
 
-static inline bool z_page_frame_is_evictable(struct z_page_frame *pf)
+static inline bool mm_vm_page_frame_is_evictable(struct mm_vm_page_frame *pf)
 {
-	return (!z_page_frame_is_free(pf) &&
-		!z_page_frame_is_reserved(pf) &&
-		z_page_frame_is_mapped(pf) &&
-		!z_page_frame_is_pinned(pf) &&
-		!z_page_frame_is_busy(pf));
+	return (!mm_vm_page_frame_is_free(pf) &&
+		!mm_vm_page_frame_is_reserved(pf) &&
+		mm_vm_page_frame_is_mapped(pf) &&
+		!mm_vm_page_frame_is_pinned(pf) &&
+		!mm_vm_page_frame_is_busy(pf));
 }
 
 /* If true, page is not being used for anything, is not reserved, is not
  * a member of some free pages list, isn't busy, and is ready to be mapped
  * in memory
  */
-static inline bool z_page_frame_is_available(struct z_page_frame *page)
+static inline bool mm_vm_page_frame_is_available(struct mm_vm_page_frame *page)
 {
 	return page->va_and_flags == 0U;
 }
 
-static inline void z_page_frame_set(struct z_page_frame *pf, uint8_t flags)
+static inline void mm_vm_page_frame_set(struct mm_vm_page_frame *pf, uint8_t flags)
 {
 	pf->va_and_flags |= flags;
 }
 
-static inline void z_page_frame_clear(struct z_page_frame *pf, uint8_t flags)
+static inline void mm_vm_page_frame_clear(struct mm_vm_page_frame *pf, uint8_t flags)
 {
 	/* ensure bit inversion to follow is done on the proper type width */
 	uintptr_t wide_flags = flags;
@@ -190,46 +253,46 @@ static inline void z_page_frame_clear(struct z_page_frame *pf, uint8_t flags)
 	pf->va_and_flags &= ~wide_flags;
 }
 
-static inline void z_assert_phys_aligned(uintptr_t phys)
+static inline void mm_assert_phys_aligned(uintptr_t phys)
 {
 	__ASSERT(phys % CONFIG_MMU_PAGE_SIZE == 0U,
 		 "physical address 0x%lx is not page-aligned", phys);
 	(void)phys;
 }
 
-extern struct z_page_frame z_page_frames[Z_NUM_PAGE_FRAMES];
+extern struct mm_vm_page_frame mm_vm_page_frames[MM_VM_NUM_PAGE_FRAMES];
 
-static inline uintptr_t z_page_frame_to_phys(struct z_page_frame *pf)
+static inline uintptr_t mm_vm_page_frame_to_phys(struct mm_vm_page_frame *pf)
 {
-	return (uintptr_t)((pf - z_page_frames) * CONFIG_MMU_PAGE_SIZE) +
-			Z_PHYS_RAM_START;
+	return (uintptr_t)((pf - mm_vm_page_frames) * CONFIG_MMU_PAGE_SIZE) +
+			MM_PHYS_RAM_START;
 }
 
 /* Presumes there is but one mapping in the virtual address space */
-static inline void *z_page_frame_to_virt(struct z_page_frame *pf)
+static inline void *mm_vm_page_frame_to_virt(struct mm_vm_page_frame *pf)
 {
 	uintptr_t flags_mask = CONFIG_MMU_PAGE_SIZE - 1;
 
 	return (void *)(pf->va_and_flags & ~flags_mask);
 }
 
-static inline bool z_is_page_frame(uintptr_t phys)
+static inline bool mm_vm_is_page_frame(uintptr_t phys)
 {
-	z_assert_phys_aligned(phys);
-	return IN_RANGE(phys, (uintptr_t)Z_PHYS_RAM_START,
-			(uintptr_t)(Z_PHYS_RAM_END - 1));
+	mm_assert_phys_aligned(phys);
+	return IN_RANGE(phys, (uintptr_t)MM_PHYS_RAM_START,
+			(uintptr_t)(MM_PHYS_RAM_END - 1));
 }
 
-static inline struct z_page_frame *z_phys_to_page_frame(uintptr_t phys)
+static inline struct mm_vm_page_frame *mm_vm_phys_to_page_frame(uintptr_t phys)
 {
-	__ASSERT(z_is_page_frame(phys),
+	__ASSERT(mm_vm_is_page_frame(phys),
 		 "0x%lx not an SRAM physical address", phys);
 
-	return &z_page_frames[(phys - Z_PHYS_RAM_START) /
-			      CONFIG_MMU_PAGE_SIZE];
+	return &mm_vm_page_frames[(phys - MM_PHYS_RAM_START) /
+				  CONFIG_MMU_PAGE_SIZE];
 }
 
-static inline void z_mem_assert_virtual_region(uint8_t *addr, size_t size)
+static inline void mm_vm_assert_virtual_region(uint8_t *addr, size_t size)
 {
 	__ASSERT((uintptr_t)addr % CONFIG_MMU_PAGE_SIZE == 0U,
 		 "unaligned addr %p", addr);
@@ -238,35 +301,49 @@ static inline void z_mem_assert_virtual_region(uint8_t *addr, size_t size)
 	__ASSERT(!Z_DETECT_POINTER_OVERFLOW(addr, size),
 		 "region %p size %zu zero or wraps around", addr, size);
 	__ASSERT(IN_RANGE((uintptr_t)addr,
-			  (uintptr_t)Z_VIRT_RAM_START,
-			  ((uintptr_t)Z_VIRT_RAM_END - 1)) &&
+			  (uintptr_t)MM_VIRT_RAM_START,
+			  ((uintptr_t)MM_VIRT_RAM_END - 1)) &&
 		 IN_RANGE(((uintptr_t)addr + size - 1),
-			  (uintptr_t)Z_VIRT_RAM_START,
-			  ((uintptr_t)Z_VIRT_RAM_END - 1)),
+			  (uintptr_t)MM_VIRT_RAM_START,
+			  ((uintptr_t)MM_VIRT_RAM_END - 1)),
 		 "invalid virtual address region %p (%zu)", addr, size);
 }
 
-/* Debug function, pretty-print page frame information for all frames
+/**
+ * @brief Pretty-print page frame information for all page frames.
+ *
+ * Debug function, pretty-print page frame information for all frames
  * concisely to printk.
  */
-void z_page_frames_dump(void);
+void mm_vm_page_frames_dump(void);
 
 /* Convenience macro for iterating over all page frames */
-#define Z_PAGE_FRAME_FOREACH(_phys, _pageframe) \
-	for ((_phys) = Z_PHYS_RAM_START, (_pageframe) = z_page_frames; \
-	     (_phys) < Z_PHYS_RAM_END; \
+#define MM_VM_PAGE_FRAME_FOREACH(_phys, _pageframe) \
+	for ((_phys) = MM_PHYS_RAM_START, (_pageframe) = mm_vm_page_frames; \
+	     (_phys) < MM_PHYS_RAM_END; \
 	     (_phys) += CONFIG_MMU_PAGE_SIZE, (_pageframe)++)
 
+/** @} */
+
+/**
+ * @def MM_VM_RESERVED
+ * @brief Reserve space at the end of virtual memory.
+ */
 #ifdef CONFIG_DEMAND_PAGING
 /* We reserve a virtual page as a scratch area for page-ins/outs at the end
  * of the address space
  */
-#define Z_VM_RESERVED	CONFIG_MMU_PAGE_SIZE
-#define Z_SCRATCH_PAGE	((void *)((uintptr_t)CONFIG_KERNEL_VM_BASE + \
-				     (uintptr_t)CONFIG_KERNEL_VM_SIZE - \
-				     CONFIG_MMU_PAGE_SIZE))
+#define MM_VM_RESERVED	CONFIG_MMU_PAGE_SIZE
+
+/**
+ * @brief Location of the scratch page used for demand paging.
+ */
+#define MM_VM_SCRATCH_PAGE \
+	((void *)((uintptr_t)CONFIG_KERNEL_VM_BASE + \
+		  (uintptr_t)CONFIG_KERNEL_VM_SIZE - \
+		  CONFIG_MMU_PAGE_SIZE))
 #else
-#define Z_VM_RESERVED	0
+#define MM_VM_RESERVED	0
 #endif /* CONFIG_DEMAND_PAGING */
 
 #ifdef CONFIG_DEMAND_PAGING
@@ -301,7 +378,7 @@ unsigned long z_num_pagefaults_get(void);
  * @retval 0 Success
  * @retval -ENOMEM Insufficient backing store space
  */
-int z_page_frame_evict(uintptr_t phys);
+int mm_vm_page_frame_evict(uintptr_t phys);
 
 /**
  * Handle a page fault for a virtual data page
