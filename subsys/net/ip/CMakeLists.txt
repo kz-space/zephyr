@@ -65,3 +65,5 @@ zephyr_library_include_directories(
   ${ZEPHYR_BASE}/kernel/include
   ${ARCH_DIR}/${ARCH}/include
   )
+
+zephyr_compile_definitions_ifdef(CONFIG_NET_FORCE_ICMP_CHECKSUM CONFIG_NET_FORCE_ICMP_CHECKSUM)

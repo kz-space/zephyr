@@ -899,6 +899,14 @@ config NET_DISABLE_ICMP_DESTINATION_UNREACHABLE
 	  Suppress the generation of ICMP destination unreachable errors
 	  when ports that are not in a listening state receive packets.
 
+config NET_FORCE_ICMP_CHECKSUM
+	bool "Force computation of ICMP checksum in software"
+	help
+	  Some drivers (e.g., Xilinx AXI EMAC) support IP/TCP checksum offloading,
+	  but are limited to computing TCP and UDP checksums. In other words,
+	  they cannot compute ICMP checksums and will leave them blank.
+	  This option forces the network stack to compute ICMP checksums in software.
+
 source "subsys/net/ip/Kconfig.stack"
 
 source "subsys/net/ip/Kconfig.mgmt"
