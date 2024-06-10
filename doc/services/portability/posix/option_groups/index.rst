@@ -271,6 +271,10 @@ required for error and event handling.
 POSIX_DEVICE_IO
 ===============
 
+.. note::
+   When using Newlib, Picolibc, or other C libraries conforming to the ISO C Standard, the
+   C89 components of the ``POSIX_DEVICE_IO`` Option Group are considered supported.
+
 .. csv-table:: POSIX_DEVICE_IO
    :header: API, Supported
    :widths: 50,10
@@ -281,48 +285,48 @@ POSIX_DEVICE_IO
     FD_ZERO(),yes
     clearerr(),yes
     close(),yes
-    fclose(),
+    fclose(),yes
     fdopen(),
-    feof(),
-    ferror(),
-    fflush(),
-    fgetc(),
-    fgets(),
+    feof(),yes
+    ferror(),yes
+    fflush(),yes
+    fgetc(),yes
+    fgets(),yes
     fileno(),
-    fopen(),
+    fopen(),yes
     fprintf(),yes
     fputc(),yes
     fputs(),yes
-    fread(),
-    freopen(),
-    fscanf(),
+    fread(),yes
+    freopen(),yes
+    fscanf(),yes
     fwrite(),yes
-    getc(),
-    getchar(),
-    gets(),
+    getc(),yes
+    getchar(),yes
+    gets(),yes
     open(),yes
     perror(),yes
     poll(),yes
     printf(),yes
-    pread(),
-    pselect(),
+    pread(),yes
+    pselect(),yes
     putc(),yes
     putchar(),yes
     puts(),yes
-    pwrite(),
+    pwrite(),yes
     read(),yes
-    scanf(),
+    scanf(),yes
     select(),yes
-    setbuf(),
-    setvbuf(),
-    stderr,
-    stdin,
-    stdout,
-    ungetc(),
+    setbuf(),yes
+    setvbuf(),yes
+    stderr,yes
+    stdin,yes
+    stdout,yes
+    ungetc(),yes
     vfprintf(),yes
-    vfscanf(),
+    vfscanf(),yes
     vprintf(),yes
-    vscanf(),
+    vscanf(),yes
     write(),yes
 
 .. _posix_option_group_barriers:
@@ -368,7 +372,7 @@ POSIX_FILE_SYSTEM
     creat(),
     fchdir(),
     fpathconf(),
-    fstat(),
+    fstat(), yes
     fstatvfs(),
     getcwd(),
     link(),
@@ -388,6 +392,19 @@ POSIX_FILE_SYSTEM
     truncate(),
     unlink(), yes
     utime(),
+
+.. _posix_option_group_mapped_files:
+
+POSIX_MAPPED_FILES
+==================
+
+.. csv-table:: POSIX_MAPPED_FILES
+   :header: API, Supported
+   :widths: 50,10
+
+    mmap(),yes
+    msync(),yes
+    munmap(),yes
 
 .. _posix_option_group_networking:
 
@@ -559,6 +576,17 @@ This table lists service support status in Zephyr for `POSIX_FD_MGMT`:
     putc_unlocked(),
     putchar_unlocked(),
 
+.. _posix_option_group_memory_protection:
+
+POSIX_MEMORY_PROTECTION
+=======================
+
+.. csv-table:: POSIX_MEMORY_PROTECTION
+   :header: API, Supported
+   :widths: 50,10
+
+    mprotect(), yes :ref:`†<posix_undefined_behaviour>`
+
 .. _posix_option_group_multi_process:
 
 POSIX_MULTI_PROCESS
@@ -652,12 +680,16 @@ For more information, please refer to :ref:`Networking <networking>`.
 _POSIX_MEMLOCK
 ++++++++++++++
 
+Zephyr's :ref:`Demand Paging API <memory_management_api_demand_paging>` does not yet support
+pinning or unpinning all virtual memory regions. The functions below are expected to fail and
+set ``errno`` to ``ENOSYS`` :ref:`†<posix_undefined_behaviour>`.
+
 .. csv-table:: _POSIX_MEMLOCK
    :header: API, Supported
    :widths: 50,10
 
-    mlockall(),
-    munlockall(),
+    mlockall(), yes
+    munlockall(), yes
 
 .. _posix_option_memlock_range:
 
@@ -668,8 +700,8 @@ _POSIX_MEMLOCK_RANGE
    :header: API, Supported
    :widths: 50,10
 
-    mlock(),
-    munlock(),
+    mlock(), yes
+    munlock(), yes
 
 .. _posix_option_message_passing:
 
@@ -757,10 +789,10 @@ _POSIX_SHARED_MEMORY_OBJECTS
    :header: API, Supported
    :widths: 50,10
 
-    mmap(),
-    munmap(),
-    shm_open(),
-    shm_unlink(),
+    mmap(), yes
+    munmap(), yes
+    shm_open(), yes
+    shm_unlink(), yes
 
 .. _posix_option_synchronized_io:
 

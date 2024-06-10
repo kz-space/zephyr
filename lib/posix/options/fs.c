@@ -15,6 +15,8 @@
 #include <zephyr/posix/fcntl.h>
 #include <zephyr/fs/fs.h>
 
+int zvfs_fstat(int fd, struct stat *buf);
+
 BUILD_ASSERT(PATH_MAX >= MAX_FILE_NAME, "PATH_MAX is less than MAX_FILE_NAME");
 
 struct posix_fs_desc {
@@ -57,34 +59,34 @@ static inline void posix_fs_free_obj(struct posix_fs_desc *ptr)
 	ptr->used = false;
 }
 
-static int posix_mode_to_zephyr(int mf)
+static int posix_mode_to_zephyr(int flags, int mode)
 {
-	int mode = (mf & O_CREAT) ? FS_O_CREATE : 0;
+	int zmode = ((flags & O_CREAT) != 0) ? FS_O_CREATE : 0;
 
-	mode |= (mf & O_APPEND) ? FS_O_APPEND : 0;
+	zmode |= (flags & O_APPEND) ? FS_O_APPEND : 0;
 
-	switch (mf & O_ACCMODE) {
+	switch (mode) {
 	case O_RDONLY:
-		mode |= FS_O_READ;
+		zmode |= FS_O_READ;
 		break;
 	case O_WRONLY:
-		mode |= FS_O_WRITE;
+		zmode |= FS_O_WRITE;
 		break;
 	case O_RDWR:
-		mode |= FS_O_RDWR;
+		zmode |= FS_O_RDWR;
 		break;
 	default:
 		break;
 	}
 
-	return mode;
+	return zmode;
 }
 
-int zvfs_open(const char *name, int flags)
+int zvfs_open(const char *name, int flags, int mode)
 {
 	int rc, fd;
 	struct posix_fs_desc *ptr = NULL;
-	int zmode = posix_mode_to_zephyr(flags);
+	int zmode = posix_mode_to_zephyr(flags, mode);
 
 	if (zmode < 0) {
 		return zmode;
@@ -152,7 +154,18 @@ static int fs_ioctl_vmeth(void *obj, unsigned int request, va_list args)
 		}
 		break;
 	}
+	case ZFD_IOCTL_TRUNCATE: {
+		off_t length;
 
+		length = va_arg(args, off_t);
+
+		rc = fs_truncate(&ptr->file, length);
+		if (rc < 0) {
+			errno = -rc;
+			return -1;
+		}
+		break;
+	}
 	default:
 		errno = EOPNOTSUPP;
 		return -1;
@@ -408,35 +421,9 @@ int mkdir(const char *path, mode_t mode)
 	return 0;
 }
 
-/**
- * @brief Truncate file to specified length.
- *
- */
-int zvfs_ftruncate(int fd, off_t length)
-{
-	int rc;
-	struct posix_fs_desc *ptr = NULL;
-
-	ptr = z_get_fd_obj(fd, NULL, EBADF);
-	if (!ptr)
-		return -1;
-
-	rc = fs_truncate(&ptr->file, length);
-	if (rc < 0) {
-		errno = -rc;
-		return -1;
-	}
-
-	return 0;
-}
-
 int fstat(int fildes, struct stat *buf)
 {
-	ARG_UNUSED(fildes);
-	ARG_UNUSED(buf);
-
-	errno = ENOTSUP;
-	return -1;
+	return zvfs_fstat(fildes, buf);
 }
 #ifdef CONFIG_POSIX_FILE_SYSTEM_ALIAS_FSTAT
 FUNC_ALIAS(fstat, _fstat, int);

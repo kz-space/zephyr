@@ -8,9 +8,32 @@
 
 #include <stdarg.h>
 #include <sys/types.h>
+#include <time.h>
+
 /* FIXME: For native_posix ssize_t, off_t. */
 #include <zephyr/fs/fs.h>
 #include <zephyr/sys/mutex.h>
+
+/* File mode bits */
+#define ZVFS_MODE_IFMT   0170000
+#define ZVFS_MODE_UNSPEC 0000000
+#define ZVFS_MODE_IFIFO  0010000
+#define ZVFS_MODE_IFCHR  0020000
+#define ZVFS_MODE_IMSGQ  0030000
+#define ZVFS_MODE_IFDIR  0040000
+#define ZVFS_MODE_IFSEM  0050000
+#define ZVFS_MODE_IFBLK  0060000
+#define ZVFS_MODE_IFSHM  0070000
+#define ZVFS_MODE_IFREG  0100000
+#define ZVFS_MODE_IFLNK  0120000
+#define ZVFS_MODE_IFSOCK 0140000
+
+#define ZVFS_POLLIN   BIT(0)
+#define ZVFS_POLLPRI  BIT(1)
+#define ZVFS_POLLOUT  BIT(2)
+#define ZVFS_POLLERR  BIT(3)
+#define ZVFS_POLLHUP  BIT(4)
+#define ZVFS_POLLNVAL BIT(5)
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,8 +44,14 @@ extern "C" {
  * Currently all operations beyond read/write/close go thru ioctl method.
  */
 struct fd_op_vtable {
-	ssize_t (*read)(void *obj, void *buf, size_t sz);
-	ssize_t (*write)(void *obj, const void *buf, size_t sz);
+	union {
+		ssize_t (*read)(void *obj, void *buf, size_t sz);
+		ssize_t (*read_offs)(void *obj, void *buf, size_t sz, size_t offset);
+	};
+	union {
+		ssize_t (*write)(void *obj, const void *buf, size_t sz);
+		ssize_t (*write_offs)(void *obj, const void *buf, size_t sz, size_t offset);
+	};
 	int (*close)(void *obj);
 	int (*ioctl)(void *obj, unsigned int request, va_list args);
 };
@@ -40,6 +69,24 @@ struct fd_op_vtable {
 int z_reserve_fd(void);
 
 /**
+ * @brief Finalize creation of file descriptor, with type.
+ *
+ * This function should be called exactly once after z_reserve_fd(), and
+ * should not be called in any other case.
+ *
+ * The difference between this function and @ref z_finalize_fd is that the
+ * latter does not relay type information of the created file descriptor.
+ *
+ * Values permitted for @a mode are one of `ZVFS_MODE_..`.
+ *
+ * @param fd File descriptor previously returned by z_reserve_fd()
+ * @param obj pointer to I/O object structure
+ * @param vtable pointer to I/O operation implementations for the object
+ * @param mode File type as specified above.
+ */
+void z_finalize_typed_fd(int fd, void *obj, const struct fd_op_vtable *vtable, uint32_t mode);
+
+/**
  * @brief Finalize creation of file descriptor.
  *
  * This function should be called exactly once after z_reserve_fd(), and
@@ -49,7 +96,10 @@ int z_reserve_fd(void);
  * @param obj pointer to I/O object structure
  * @param vtable pointer to I/O operation implementations for the object
  */
-void z_finalize_fd(int fd, void *obj, const struct fd_op_vtable *vtable);
+static inline void z_finalize_fd(int fd, void *obj, const struct fd_op_vtable *vtable)
+{
+	z_finalize_typed_fd(fd, obj, vtable, ZVFS_MODE_UNSPEC);
+}
 
 /**
  * @brief Allocate file descriptor for underlying I/O object.
@@ -150,6 +200,28 @@ static inline int z_fdtable_call_ioctl(const struct fd_op_vtable *vtable, void *
 	return res;
 }
 
+struct zvfs_pollfd {
+	int fd;
+	short events;
+	short revents;
+};
+
+__syscall int zvfs_poll(struct zvfs_pollfd *fds, int nfds, int poll_timeout);
+
+struct zvfs_fd_set {
+	uint32_t bitset[(CONFIG_ZVFS_OPEN_MAX + 31) / 32];
+};
+
+void ZVFS_FD_CLR(int fd, struct zvfs_fd_set *fdset);
+int ZVFS_FD_ISSET(int fd, struct zvfs_fd_set *fdset);
+void ZVFS_FD_SET(int fd, struct zvfs_fd_set *fdset);
+void ZVFS_FD_ZERO(struct zvfs_fd_set *fdset);
+
+__syscall int zvfs_select(int nfds, struct zvfs_fd_set *ZRESTRICT readfds,
+			  struct zvfs_fd_set *ZRESTRICT writefds,
+			  struct zvfs_fd_set *ZRESTRICT errorfds,
+			  const struct timespec *ZRESTRICT timeout, const void *ZRESTRICT sigmask);
+
 /**
  * Request codes for fd_op_vtable.ioctl().
  *
@@ -166,6 +238,9 @@ enum {
 	ZFD_IOCTL_POLL_UPDATE,
 	ZFD_IOCTL_POLL_OFFLOAD,
 	ZFD_IOCTL_SET_LOCK,
+	ZFD_IOCTL_STAT,
+	ZFD_IOCTL_TRUNCATE,
+	ZFD_IOCTL_MMAP,
 
 	/* Codes above 0x5400 and below 0x5500 are reserved for termios, FIO, etc */
 	ZFD_IOCTL_FIONREAD = 0x541B,
@@ -175,5 +250,7 @@ enum {
 #ifdef __cplusplus
 }
 #endif
+
+#include <zephyr/syscalls/fdtable.h>
 
 #endif /* ZEPHYR_INCLUDE_SYS_FDTABLE_H_ */
