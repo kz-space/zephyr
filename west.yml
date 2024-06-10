@@ -337,7 +337,7 @@ manifest:
       groups:
         - tee
     - name: uoscore-uedhoc
-      revision: 150f4eb2955eaf36ac0f9519d4f4f58d5ade5740
+      revision: pull/4/head
       path: modules/lib/uoscore-uedhoc
     - name: zcbor
       revision: 75d088037eb237b18e7ec1f47c9ce494b9b95aab
