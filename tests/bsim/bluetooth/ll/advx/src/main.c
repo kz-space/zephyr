@@ -654,7 +654,7 @@ static void test_advx_main(void)
 		}
 	};
 	const struct bt_le_adv_param adv_param = {
-		.options = BT_LE_ADV_OPT_CONNECTABLE,
+		.options = BT_LE_ADV_OPT_CONN,
 		.peer = &direct_addr,
 	};
 	err = bt_le_adv_start(&adv_param, NULL, 0, NULL, 0);

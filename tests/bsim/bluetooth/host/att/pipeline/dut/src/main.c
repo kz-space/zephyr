@@ -122,9 +122,9 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 }
 
 /* In your area */
-#define ADV_PARAM_SINGLE BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME, \
-					 BT_GAP_ADV_FAST_INT_MIN_2,	\
-					 BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+#define ADV_PARAM_SINGLE                                                                           \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2,  \
+			NULL)
 
 static strucc bt_conn *connecc(void)
 {

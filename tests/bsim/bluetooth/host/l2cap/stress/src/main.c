@@ -309,10 +309,9 @@ static void disconnect_device(struct bt_conn *conn, void *data)
 	WAIT_FOR_FLAG_UNSET(is_connected);
 }
 
-#define BT_LE_ADV_CONN_OT BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | \
-					  BT_LE_ADV_OPT_ONE_TIME,	\
-					  BT_GAP_ADV_FAST_INT_MIN_2, \
-					  BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+#define BT_LE_ADV_CONN_OT                                                                          \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2,  \
+			NULL)
 
 static void test_peripheral_main(void)
 {
