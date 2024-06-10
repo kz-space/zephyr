@@ -22,6 +22,7 @@ int main(void)
 	struct video_caps caps;
 	const struct device *video;
 	unsigned int frame = 0;
+	unsigned int framelen = 0;
 	size_t bsize;
 	int i = 0;
 
@@ -35,6 +36,15 @@ int main(void)
 	/* But would be better to use a real video device if any */
 #if defined(CONFIG_VIDEO_MCUX_CSI)
 	const struct device *const dev = DEVICE_DT_GET_ONE(nxp_imx_csi);
+
+	if (!device_is_ready(dev)) {
+		LOG_ERR("%s: device not ready.\n", dev->name);
+		return 0;
+	}
+
+	video = dev;
+#elif defined(CONFIG_VIDEO_MCUX_SDMA)
+	const struct device *const dev = DEVICE_DT_GET_ONE(nxp_video_smartdma);
 
 	if (!device_is_ready(dev)) {
 		LOG_ERR("%s: device not ready.\n", dev->name);
@@ -78,8 +88,14 @@ int main(void)
 	       (char)(fmt.pixelformat >> 24),
 	       fmt.width, fmt.height);
 
+
 	/* Size to allocate for each buffer */
-	bsize = fmt.pitch * fmt.height;
+	if (caps.feature_flags & VIDEO_CAP_VARIABLE_VBUFS) {
+		/* Arbitrary buffer size supported, just use a KiB buffer */
+		bsize = 1024;
+	} else {
+		bsize = fmt.pitch * fmt.height / caps.vbuf_per_frame;
+	}
 
 	/* Alloc video buffers and enqueue for capture */
 	for (i = 0; i < ARRAY_SIZE(buffers); i++) {
@@ -110,8 +126,20 @@ int main(void)
 			return 0;
 		}
 
-		printk("\rGot frame %u! size: %u; timestamp %u ms",
-		       frame++, vbuf->bytesused, vbuf->timestamp);
+		/* Account for this vbuf in the total frame length */
+		framelen += vbuf->bytesused;
+
+		if (vbuf->flags == VIDEO_BUF_EOF) {
+			if (framelen != vbuf->bytesframe) {
+				LOG_ERR("Total vbuf size %u does not match "
+					"frame size %u", framelen,
+					vbuf->bytesframe);
+				return 0;
+			}
+			printk("\rGot frame %u! size: %u; timestamp %u ms",
+			       frame++, vbuf->bytesframe, vbuf->timestamp);
+			framelen = 0;
+		}
 
 		err = video_enqueue(video, VIDEO_EP_OUT, vbuf);
 		if (err) {
